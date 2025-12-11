@@ -2,19 +2,25 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UserPlus } from "lucide-react";
+import { UserPlus, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const clientSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome deve ter no máximo 100 caracteres"),
   document: z.string().trim().max(20, "Documento deve ter no máximo 20 caracteres").optional().or(z.literal("")),
   email: z.string().trim().email("E-mail inválido").max(255, "E-mail deve ter no máximo 255 caracteres").optional().or(z.literal("")),
   phone: z.string().trim().max(20, "Telefone deve ter no máximo 20 caracteres").optional().or(z.literal("")),
+  entryDate: z.date().optional(),
+  exitDate: z.date().optional(),
   totalValue: z.string().min(1, "Valor total é obrigatório"),
   totalInstallments: z.string().min(1, "Número de parcelas é obrigatório"),
   paymentDay: z.string().min(1, "Dia de pagamento é obrigatório"),
@@ -38,6 +44,8 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
       document: "",
       email: "",
       phone: "",
+      entryDate: new Date(),
+      exitDate: undefined,
       totalValue: "",
       totalInstallments: "",
       paymentDay: "",
@@ -56,6 +64,8 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
           document: data.document || null,
           email: data.email || null,
           phone: data.phone || null,
+          entry_date: data.entryDate ? data.entryDate.toISOString().split("T")[0] : null,
+          exit_date: data.exitDate ? data.exitDate.toISOString().split("T")[0] : null,
         })
         .select()
         .single();
@@ -80,10 +90,11 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
 
       if (contractError) throw contractError;
 
-      // Create installments
+      // Create installments with expected_end_date
       const installmentValue = totalValue / totalInstallments;
       const installments = [];
       const today = new Date();
+      const expectedEndDate = new Date(today.getFullYear(), today.getMonth() + totalInstallments, paymentDay);
 
       for (let i = 1; i <= totalInstallments; i++) {
         const dueDate = new Date(today.getFullYear(), today.getMonth() + i, paymentDay);
@@ -94,6 +105,7 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
           value: installmentValue,
           due_date: dueDate.toISOString().split("T")[0],
           status: "open",
+          expected_end_date: expectedEndDate.toISOString().split("T")[0],
         });
       }
 
@@ -178,6 +190,76 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
                     <FormControl>
                       <Input type="email" placeholder="email@exemplo.com" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="entryDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Entrada</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? format(field.value, "dd/MM/yyyy") : "Selecionar data"}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="exitDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Saída</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? format(field.value, "dd/MM/yyyy") : "Selecionar data"}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}

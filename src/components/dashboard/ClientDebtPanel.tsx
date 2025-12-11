@@ -155,10 +155,21 @@ export const ClientDebtPanel = () => {
                         <span className="font-medium text-foreground">
                           Saldo: {formatCurrency(item.totalDebt)}
                         </span>
+                        {item.client.entry_date && (
+                          <span className="flex items-center gap-1 text-primary">
+                            <Calendar className="h-3.5 w-3.5" />
+                            Entrada: {formatDate(item.client.entry_date)}
+                          </span>
+                        )}
+                        {item.client.exit_date && (
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            Saída: {formatDate(item.client.exit_date)}
+                          </span>
+                        )}
                         {item.oldestOverdue && (
                           <span className="flex items-center gap-1 text-destructive">
-                            <Calendar className="h-3.5 w-3.5" />
-                            Desde: {formatDate(item.oldestOverdue)}
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            Atraso desde: {formatDate(item.oldestOverdue)}
                           </span>
                         )}
                       </div>
@@ -201,10 +212,15 @@ export const ClientDebtPanel = () => {
                                 {statusLabel(installment.status)}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-3 text-sm">
+                            <div className="flex items-center gap-3 flex-wrap text-sm">
                               <span className="text-muted-foreground">
                                 Venc: {formatDate(installment.due_date)}
                               </span>
+                              {installment.expected_end_date && (
+                                <span className="text-muted-foreground">
+                                  Término: {formatDate(installment.expected_end_date)}
+                                </span>
+                              )}
                               <span className="font-medium">
                                 {formatCurrency(installment.value)}
                               </span>

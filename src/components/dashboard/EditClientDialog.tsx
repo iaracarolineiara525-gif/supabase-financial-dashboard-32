@@ -2,24 +2,39 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const editClientSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100),
   document: z.string().trim().max(20).optional().or(z.literal("")),
   email: z.string().trim().email("E-mail inválido").max(255).optional().or(z.literal("")),
   phone: z.string().trim().max(20).optional().or(z.literal("")),
+  entryDate: z.date().optional(),
+  exitDate: z.date().optional(),
 });
 
 type EditClientFormData = z.infer<typeof editClientSchema>;
 
 interface EditClientDialogProps {
-  client: { id: string; name: string; document?: string | null; email?: string | null; phone?: string | null } | null;
+  client: { 
+    id: string; 
+    name: string; 
+    document?: string | null; 
+    email?: string | null; 
+    phone?: string | null;
+    entry_date?: string | null;
+    exit_date?: string | null;
+  } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onClientUpdated: () => void;
@@ -35,6 +50,8 @@ export function EditClientDialog({ client, open, onOpenChange, onClientUpdated }
       document: "",
       email: "",
       phone: "",
+      entryDate: undefined,
+      exitDate: undefined,
     },
   });
 
@@ -45,6 +62,8 @@ export function EditClientDialog({ client, open, onOpenChange, onClientUpdated }
         document: client.document || "",
         email: client.email || "",
         phone: client.phone || "",
+        entryDate: client.entry_date ? new Date(client.entry_date) : undefined,
+        exitDate: client.exit_date ? new Date(client.exit_date) : undefined,
       });
     }
   }, [client, form]);
@@ -60,6 +79,8 @@ export function EditClientDialog({ client, open, onOpenChange, onClientUpdated }
           document: data.document || null,
           email: data.email || null,
           phone: data.phone || null,
+          entry_date: data.entryDate ? data.entryDate.toISOString().split("T")[0] : null,
+          exit_date: data.exitDate ? data.exitDate.toISOString().split("T")[0] : null,
         })
         .eq("id", client.id);
 
@@ -130,6 +151,76 @@ export function EditClientDialog({ client, open, onOpenChange, onClientUpdated }
                   <FormControl>
                     <Input placeholder="(00) 00000-0000" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="entryDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data de Entrada</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? format(field.value, "dd/MM/yyyy") : "Selecionar data"}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="exitDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data de Saída</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? format(field.value, "dd/MM/yyyy") : "Selecionar data"}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
