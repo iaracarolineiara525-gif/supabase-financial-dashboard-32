@@ -1,4 +1,4 @@
-import logoGpn from "@/assets/logo-gpn.png";
+import logoGpn from "@/assets/logo-gpn-new.webp";
 
 export const GPNLogo = ({ className = "" }: { className?: string }) => {
   return (
