@@ -14,10 +14,13 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDashboardKPIs, useInstallments } from "@/hooks/useFinancialData";
 import { useEmployees, useEmployeePayments, useCommissions } from "@/hooks/useEmployeeData";
 import { formatCurrency } from "@/lib/formatters";
-import { Users, AlertCircle, BarChart3, DollarSign, TrendingUp, Calendar, RefreshCw, Wallet, Percent, Menu, CheckCircle, Clock } from "lucide-react";
+import { Users, AlertCircle, BarChart3, DollarSign, TrendingUp, Calendar, RefreshCw, Wallet, Percent, Menu, CheckCircle, Clock, LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const menuItems = [
   { id: "clientes", label: "Clientes", icon: Users },
@@ -39,9 +42,25 @@ const Index = () => {
   const { data: commissions } = useCommissions();
   const queryClient = useQueryClient();
   const { theme } = useTheme();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleRefresh = () => {
     queryClient.invalidateQueries();
+  };
+
+  const handleLogout = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: 'Erro ao sair',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      navigate('/auth');
+    }
   };
 
   // Calculate KPIs for each section
@@ -245,6 +264,16 @@ const Index = () => {
                 </Button>
 
                 <ThemeToggle />
+
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={handleLogout}
+                  className="border-border/50 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all"
+                  title="Sair"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>
