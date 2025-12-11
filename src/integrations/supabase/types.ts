@@ -19,6 +19,8 @@ export type Database = {
           created_at: string
           document: string | null
           email: string | null
+          entry_date: string | null
+          exit_date: string | null
           id: string
           name: string
           phone: string | null
@@ -28,6 +30,8 @@ export type Database = {
           created_at?: string
           document?: string | null
           email?: string | null
+          entry_date?: string | null
+          exit_date?: string | null
           id?: string
           name: string
           phone?: string | null
@@ -37,6 +41,8 @@ export type Database = {
           created_at?: string
           document?: string | null
           email?: string | null
+          entry_date?: string | null
+          exit_date?: string | null
           id?: string
           name?: string
           phone?: string | null
@@ -224,6 +230,7 @@ export type Database = {
           contract_id: string
           created_at: string
           due_date: string
+          expected_end_date: string | null
           id: string
           installment_number: number
           paid_date: string | null
@@ -236,6 +243,7 @@ export type Database = {
           contract_id: string
           created_at?: string
           due_date: string
+          expected_end_date?: string | null
           id?: string
           installment_number: number
           paid_date?: string | null
@@ -248,6 +256,7 @@ export type Database = {
           contract_id?: string
           created_at?: string
           due_date?: string
+          expected_end_date?: string | null
           id?: string
           installment_number?: number
           paid_date?: string | null

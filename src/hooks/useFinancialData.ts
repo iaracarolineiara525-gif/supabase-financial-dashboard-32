@@ -7,6 +7,8 @@ export interface Client {
   email: string | null;
   phone: string | null;
   document: string | null;
+  entry_date: string | null;
+  exit_date: string | null;
 }
 
 export interface Contract {
@@ -26,6 +28,7 @@ export interface Installment {
   due_date: string;
   paid_date: string | null;
   status: "open" | "paid" | "overdue";
+  expected_end_date: string | null;
 }
 
 export interface ClientWithDebt {

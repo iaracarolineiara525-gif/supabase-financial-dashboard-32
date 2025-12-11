@@ -9,6 +9,7 @@ import { EmployeePaymentsPanel } from "@/components/dashboard/EmployeePaymentsPa
 import { CommissionsPanel } from "@/components/dashboard/CommissionsPanel";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { ClientRegistrationDialog } from "@/components/dashboard/ClientRegistrationDialog";
+import { ExportDialog } from "@/components/dashboard/ExportDialog";
 import { GPNLogo } from "@/components/GPNLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDashboardKPIs, useInstallments } from "@/hooks/useFinancialData";
@@ -188,11 +189,8 @@ const Index = () => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-4 border-b border-border/50">
-            <div className="flex items-center gap-3">
-              <GPNLogo className="h-8 w-auto flex-shrink-0" />
-              {sidebarOpen && (
-                <span className="text-sm font-semibold text-foreground">GPN Digital</span>
-              )}
+            <div className="flex justify-center">
+              <GPNLogo className="h-10 w-auto" />
             </div>
           </div>
 
@@ -244,6 +242,7 @@ const Index = () => {
               </div>
               
               <div className="flex items-center gap-3 flex-wrap">
+                <ExportDialog />
                 <ClientRegistrationDialog onClientCreated={handleRefresh} />
                 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
