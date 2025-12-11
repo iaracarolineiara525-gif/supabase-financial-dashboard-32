@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { GPNLogo } from '@/components/GPNLogo';
+
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTheme } from '@/hooks/useTheme';
 import { Loader2, Mail, Lock, User } from 'lucide-react';
@@ -137,9 +137,6 @@ export default function Auth() {
       
       <Card className="w-full max-w-md glass-card">
         <CardHeader className="text-center space-y-4">
-          <div className="flex justify-center">
-            <GPNLogo className="h-12 w-auto" />
-          </div>
           <div>
             <CardTitle className="text-2xl font-bold">
               {isLogin ? 'Entrar' : 'Criar Conta'}
