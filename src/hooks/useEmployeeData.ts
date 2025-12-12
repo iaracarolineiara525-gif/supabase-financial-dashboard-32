@@ -168,6 +168,29 @@ export const useUpdateCommissionStatus = () => {
   });
 };
 
+export const useUpdateCommission = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...commission }: Partial<Commission> & { id: string }) => {
+      const { employee, ...updateData } = commission;
+      const { error } = await supabase.from("commissions").update(updateData).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["commissions"] }),
+  });
+};
+
+export const useDeleteCommission = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("commissions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["commissions"] }),
+  });
+};
+
 export const useUpdateEmployee = () => {
   const queryClient = useQueryClient();
   return useMutation({
