@@ -64,16 +64,19 @@ export const CommissionsPanel = () => {
   }, [editingCommission?.amount, editingCommission?.percentage]);
 
   const handleCreate = async () => {
-    const amount = parseFloat(newCommission.amount);
-    if (!newCommission.employee_id || !amount) {
+    const baseAmount = parseFloat(newCommission.amount);
+    const percentage = parseFloat(newCommission.percentage) || 0;
+    if (!newCommission.employee_id || !baseAmount) {
       toast.error("Selecione um colaborador e informe o valor");
       return;
     }
+    // Use calculated value if percentage is set, otherwise use base amount
+    const finalAmount = percentage > 0 ? (baseAmount * percentage) / 100 : baseAmount;
     try {
       await createCommission.mutateAsync({
         employee_id: newCommission.employee_id,
-        amount: amount,
-        percentage: parseFloat(newCommission.percentage) || null,
+        amount: finalAmount,
+        percentage: percentage || null,
         commission_date: newCommission.commission_date,
         status: newCommission.status,
         paid_date: newCommission.status === "paid" ? newCommission.commission_date : null,
@@ -111,17 +114,20 @@ export const CommissionsPanel = () => {
 
   const handleUpdate = async () => {
     if (!editingCommission) return;
-    const amount = parseFloat(editingCommission.amount);
-    if (!amount) {
+    const baseAmount = parseFloat(editingCommission.amount);
+    const percentage = parseFloat(editingCommission.percentage) || 0;
+    if (!baseAmount) {
       toast.error("Informe o valor");
       return;
     }
+    // Use calculated value if percentage is set, otherwise use base amount
+    const finalAmount = percentage > 0 ? (baseAmount * percentage) / 100 : baseAmount;
     try {
       await updateCommission.mutateAsync({
         id: editingCommission.id,
         employee_id: editingCommission.employee_id,
-        amount: amount,
-        percentage: parseFloat(editingCommission.percentage) || null,
+        amount: finalAmount,
+        percentage: percentage || null,
         commission_date: editingCommission.commission_date,
         status: editingCommission.status,
         paid_date: editingCommission.status === "paid" ? editingCommission.commission_date : null,
