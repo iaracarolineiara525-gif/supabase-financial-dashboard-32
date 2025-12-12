@@ -90,21 +90,25 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
 
       if (contractError) throw contractError;
 
-      // Create installments with expected_end_date
+      // Create installments with expected_end_date based on entry date
       const installmentValue = totalValue / totalInstallments;
       const installments = [];
+      const entryDate = data.entryDate || new Date();
+      const expectedEndDate = new Date(entryDate.getFullYear(), entryDate.getMonth() + totalInstallments, paymentDay);
       const today = new Date();
-      const expectedEndDate = new Date(today.getFullYear(), today.getMonth() + totalInstallments, paymentDay);
+      today.setHours(0, 0, 0, 0);
 
       for (let i = 1; i <= totalInstallments; i++) {
-        const dueDate = new Date(today.getFullYear(), today.getMonth() + i, paymentDay);
+        const dueDate = new Date(entryDate.getFullYear(), entryDate.getMonth() + i, paymentDay);
+        // Check if overdue based on current date
+        const isOverdue = dueDate < today;
         installments.push({
           contract_id: contract.id,
           installment_number: i,
           total_installments: totalInstallments,
           value: installmentValue,
           due_date: dueDate.toISOString().split("T")[0],
-          status: "open",
+          status: isOverdue ? "overdue" : "open",
           expected_end_date: expectedEndDate.toISOString().split("T")[0],
         });
       }
