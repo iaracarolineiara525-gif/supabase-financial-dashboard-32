@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,9 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEmployees, useCommissions, useCreateCommission, useUpdateCommissionStatus } from "@/hooks/useEmployeeData";
+import { useEmployees, useCommissions, useCreateCommission, useUpdateCommissionStatus, useUpdateCommission, useDeleteCommission } from "@/hooks/useEmployeeData";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Percent, Plus, CheckCircle2, Clock, Calendar } from "lucide-react";
+import { Percent, Plus, CheckCircle2, Clock, Calendar, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DateFilters } from "./DateFilters";
 
@@ -19,27 +19,61 @@ export const CommissionsPanel = () => {
   const { data: commissions, isLoading } = useCommissions(filters);
   const createCommission = useCreateCommission();
   const updateStatus = useUpdateCommissionStatus();
+  const updateCommission = useUpdateCommission();
+  const deleteCommission = useDeleteCommission();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingCommission, setEditingCommission] = useState<{
+    id: string;
+    employee_id: string;
+    amount: string;
+    percentage: string;
+    commission_date: string;
+    status: string;
+    description: string;
+  } | null>(null);
+  
   const [newCommission, setNewCommission] = useState({
     employee_id: "",
-    amount: 0,
-    percentage: 0,
+    amount: "",
+    percentage: "",
     commission_date: new Date().toISOString().split('T')[0],
     status: "pending",
     description: ""
   });
 
+  // Calculate final value based on percentage
+  const calculatedValue = useMemo(() => {
+    const amount = parseFloat(newCommission.amount) || 0;
+    const percentage = parseFloat(newCommission.percentage) || 0;
+    if (amount > 0 && percentage > 0) {
+      return (amount * percentage) / 100;
+    }
+    return 0;
+  }, [newCommission.amount, newCommission.percentage]);
+
+  const editCalculatedValue = useMemo(() => {
+    if (!editingCommission) return 0;
+    const amount = parseFloat(editingCommission.amount) || 0;
+    const percentage = parseFloat(editingCommission.percentage) || 0;
+    if (amount > 0 && percentage > 0) {
+      return (amount * percentage) / 100;
+    }
+    return 0;
+  }, [editingCommission?.amount, editingCommission?.percentage]);
+
   const handleCreate = async () => {
-    if (!newCommission.employee_id || !newCommission.amount) {
-      toast.error("Selecione um funcionário e informe o valor");
+    const amount = parseFloat(newCommission.amount);
+    if (!newCommission.employee_id || !amount) {
+      toast.error("Selecione um colaborador e informe o valor");
       return;
     }
     try {
       await createCommission.mutateAsync({
         employee_id: newCommission.employee_id,
-        amount: newCommission.amount,
-        percentage: newCommission.percentage || null,
+        amount: amount,
+        percentage: parseFloat(newCommission.percentage) || null,
         commission_date: newCommission.commission_date,
         status: newCommission.status,
         paid_date: newCommission.status === "paid" ? newCommission.commission_date : null,
@@ -50,14 +84,63 @@ export const CommissionsPanel = () => {
       setDialogOpen(false);
       setNewCommission({
         employee_id: "",
-        amount: 0,
-        percentage: 0,
+        amount: "",
+        percentage: "",
         commission_date: new Date().toISOString().split('T')[0],
         status: "pending",
         description: ""
       });
     } catch {
       toast.error("Erro ao registrar comissão");
+    }
+  };
+
+  const handleEdit = (commission: typeof commissions extends (infer T)[] | undefined ? T : never) => {
+    if (!commission) return;
+    setEditingCommission({
+      id: commission.id,
+      employee_id: commission.employee_id,
+      amount: String(commission.amount),
+      percentage: commission.percentage ? String(commission.percentage) : "",
+      commission_date: commission.commission_date,
+      status: commission.status,
+      description: commission.description || ""
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingCommission) return;
+    const amount = parseFloat(editingCommission.amount);
+    if (!amount) {
+      toast.error("Informe o valor");
+      return;
+    }
+    try {
+      await updateCommission.mutateAsync({
+        id: editingCommission.id,
+        employee_id: editingCommission.employee_id,
+        amount: amount,
+        percentage: parseFloat(editingCommission.percentage) || null,
+        commission_date: editingCommission.commission_date,
+        status: editingCommission.status,
+        paid_date: editingCommission.status === "paid" ? editingCommission.commission_date : null,
+        description: editingCommission.description || null
+      });
+      toast.success("Comissão atualizada!");
+      setEditDialogOpen(false);
+      setEditingCommission(null);
+    } catch {
+      toast.error("Erro ao atualizar comissão");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCommission.mutateAsync(id);
+      toast.success("Comissão excluída!");
+    } catch {
+      toast.error("Erro ao excluir comissão");
     }
   };
 
@@ -102,7 +185,7 @@ export const CommissionsPanel = () => {
               <Percent className="h-5 w-5 text-primary" />
               Controle de Comissões
             </CardTitle>
-            <CardDescription>Comissões dos funcionários</CardDescription>
+            <CardDescription>Comissões dos colaboradores</CardDescription>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -117,7 +200,7 @@ export const CommissionsPanel = () => {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Funcionário *</Label>
+                  <Label>Colaborador *</Label>
                   <Select value={newCommission.employee_id} onValueChange={(v) => setNewCommission({ ...newCommission, employee_id: v })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
@@ -132,13 +215,37 @@ export const CommissionsPanel = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Valor *</Label>
-                    <Input type="number" value={newCommission.amount} onChange={(e) => setNewCommission({ ...newCommission, amount: Number(e.target.value) })} />
+                    <Input 
+                      type="text" 
+                      inputMode="decimal"
+                      value={newCommission.amount} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.,]/g, '');
+                        setNewCommission({ ...newCommission, amount: val });
+                      }} 
+                      placeholder="0,00"
+                    />
                   </div>
                   <div>
                     <Label>Percentual (%)</Label>
-                    <Input type="number" value={newCommission.percentage} onChange={(e) => setNewCommission({ ...newCommission, percentage: Number(e.target.value) })} />
+                    <Input 
+                      type="text" 
+                      inputMode="decimal"
+                      value={newCommission.percentage} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.,]/g, '');
+                        setNewCommission({ ...newCommission, percentage: val });
+                      }} 
+                      placeholder="0"
+                    />
                   </div>
                 </div>
+                {calculatedValue > 0 && (
+                  <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                    <p className="text-xs text-muted-foreground">Valor da Comissão (calculado)</p>
+                    <p className="text-lg font-bold text-primary">{formatCurrency(calculatedValue)}</p>
+                  </div>
+                )}
                 <div>
                   <Label>Data da Comissão</Label>
                   <Input type="date" value={newCommission.commission_date} onChange={(e) => setNewCommission({ ...newCommission, commission_date: e.target.value })} />
@@ -206,7 +313,7 @@ export const CommissionsPanel = () => {
                 {commission.description && (
                   <p className="text-xs text-muted-foreground mt-1">{commission.description}</p>
                 )}
-                <div className="mt-2">
+                <div className="mt-2 flex gap-2">
                   <Button
                     size="sm"
                     variant={commission.status === "paid" ? "ghost" : "outline"}
@@ -214,6 +321,24 @@ export const CommissionsPanel = () => {
                     onClick={() => handleToggleStatus(commission.id, commission.status)}
                   >
                     {commission.status === "paid" ? "Desfazer" : "Marcar como Paga"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => handleEdit(commission)}
+                  >
+                    <Pencil className="h-3 w-3 mr-1" />
+                    Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs text-destructive hover:text-destructive"
+                    onClick={() => handleDelete(commission.id)}
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Excluir
                   </Button>
                 </div>
               </div>
@@ -224,6 +349,87 @@ export const CommissionsPanel = () => {
           </div>
         </ScrollArea>
       </CardContent>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="glass-card border-border/50">
+          <DialogHeader>
+            <DialogTitle>Editar Comissão</DialogTitle>
+          </DialogHeader>
+          {editingCommission && (
+            <div className="space-y-4">
+              <div>
+                <Label>Colaborador *</Label>
+                <Select value={editingCommission.employee_id} onValueChange={(v) => setEditingCommission({ ...editingCommission, employee_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees?.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Valor *</Label>
+                  <Input 
+                    type="text" 
+                    inputMode="decimal"
+                    value={editingCommission.amount} 
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.,]/g, '');
+                      setEditingCommission({ ...editingCommission, amount: val });
+                    }} 
+                    placeholder="0,00"
+                  />
+                </div>
+                <div>
+                  <Label>Percentual (%)</Label>
+                  <Input 
+                    type="text" 
+                    inputMode="decimal"
+                    value={editingCommission.percentage} 
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.,]/g, '');
+                      setEditingCommission({ ...editingCommission, percentage: val });
+                    }} 
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              {editCalculatedValue > 0 && (
+                <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                  <p className="text-xs text-muted-foreground">Valor da Comissão (calculado)</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(editCalculatedValue)}</p>
+                </div>
+              )}
+              <div>
+                <Label>Data da Comissão</Label>
+                <Input type="date" value={editingCommission.commission_date} onChange={(e) => setEditingCommission({ ...editingCommission, commission_date: e.target.value })} />
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Select value={editingCommission.status} onValueChange={(v) => setEditingCommission({ ...editingCommission, status: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="paid">Paga</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Descrição</Label>
+                <Input value={editingCommission.description} onChange={(e) => setEditingCommission({ ...editingCommission, description: e.target.value })} placeholder="Observação" />
+              </div>
+              <Button onClick={handleUpdate} className="w-full">Salvar</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
