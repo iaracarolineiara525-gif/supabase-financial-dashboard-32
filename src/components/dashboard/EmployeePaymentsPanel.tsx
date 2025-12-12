@@ -7,9 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEmployees, useEmployeePayments, useCreateEmployee, useCreateEmployeePayment, useDeleteEmployee } from "@/hooks/useEmployeeData";
+import { useEmployees, useEmployeePayments, useCreateEmployee, useCreateEmployeePayment, useDeleteEmployee, useUpdateEmployee, useUpdateEmployeePayment, useDeleteEmployeePayment } from "@/hooks/useEmployeeData";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Users, Plus, DollarSign, Calendar, Trash2 } from "lucide-react";
+import { Users, Plus, DollarSign, Calendar, Trash2, Pencil, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { DateFilters } from "./DateFilters";
 
@@ -20,11 +20,16 @@ export const EmployeePaymentsPanel = () => {
   const createEmployee = useCreateEmployee();
   const createPayment = useCreateEmployeePayment();
   const deleteEmployee = useDeleteEmployee();
+  const updateEmployee = useUpdateEmployee();
+  const updatePayment = useUpdateEmployeePayment();
+  const deletePayment = useDeleteEmployeePayment();
 
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [editEmployeeDialogOpen, setEditEmployeeDialogOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<{ id: string; name: string; role: string; salary: number } | null>(null);
   const [newEmployee, setNewEmployee] = useState({ name: "", role: "", email: null as string | null, phone: null as string | null, salary: 0, hire_date: new Date().toISOString().split('T')[0], active: true });
-  const [newPayment, setNewPayment] = useState({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "" });
+  const [newPayment, setNewPayment] = useState({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1, status: "pending" });
 
   const handleCreateEmployee = async () => {
     if (!newEmployee.name) {
@@ -43,14 +48,27 @@ export const EmployeePaymentsPanel = () => {
 
   const handleCreatePayment = async () => {
     if (!newPayment.employee_id || !newPayment.amount) {
-      toast.error("Selecione um funcionário e informe o valor");
+      toast.error("Selecione um colaborador e informe o valor");
       return;
     }
     try {
-      await createPayment.mutateAsync(newPayment);
-      toast.success("Pagamento registrado!");
+      const baseDate = new Date(newPayment.payment_date);
+      const numInstallments = newPayment.installments || 1;
+      
+      for (let i = 0; i < numInstallments; i++) {
+        const paymentDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate());
+        await createPayment.mutateAsync({
+          employee_id: newPayment.employee_id,
+          amount: newPayment.amount,
+          payment_date: paymentDate.toISOString().split('T')[0],
+          payment_type: newPayment.payment_type,
+          description: numInstallments > 1 ? `${newPayment.description || ''} (${i + 1}/${numInstallments})`.trim() : newPayment.description,
+          status: i === 0 ? newPayment.status : "pending"
+        });
+      }
+      toast.success(numInstallments > 1 ? `${numInstallments} pagamentos registrados!` : "Pagamento registrado!");
       setPaymentDialogOpen(false);
-      setNewPayment({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "" });
+      setNewPayment({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1, status: "pending" });
     } catch {
       toast.error("Erro ao registrar pagamento");
     }
@@ -59,13 +77,41 @@ export const EmployeePaymentsPanel = () => {
   const handleDeleteEmployee = async (id: string) => {
     try {
       await deleteEmployee.mutateAsync(id);
-      toast.success("Funcionário excluído!");
+      toast.success("Colaborador excluído!");
     } catch {
-      toast.error("Erro ao excluir funcionário");
+      toast.error("Erro ao excluir colaborador");
     }
   };
 
-  const totalPaid = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+  const handleEditEmployee = (emp: { id: string; name: string; role: string | null; salary: number }) => {
+    setEditingEmployee({ id: emp.id, name: emp.name, role: emp.role || "", salary: emp.salary });
+    setEditEmployeeDialogOpen(true);
+  };
+
+  const handleUpdateEmployee = async () => {
+    if (!editingEmployee) return;
+    try {
+      await updateEmployee.mutateAsync(editingEmployee);
+      toast.success("Colaborador atualizado!");
+      setEditEmployeeDialogOpen(false);
+      setEditingEmployee(null);
+    } catch {
+      toast.error("Erro ao atualizar colaborador");
+    }
+  };
+
+  const handleTogglePaymentStatus = async (payment: { id: string; status?: string }) => {
+    const newStatus = payment.status === "paid" ? "pending" : "paid";
+    try {
+      await updatePayment.mutateAsync({ id: payment.id, status: newStatus });
+      toast.success(newStatus === "paid" ? "Pagamento marcado como pago!" : "Pagamento desmarcado");
+    } catch {
+      toast.error("Erro ao atualizar status");
+    }
+  };
+
+  const totalPaid = payments?.filter(p => p.status === "paid").reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+  const totalPending = payments?.filter(p => p.status !== "paid").reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
   const isLoading = loadingEmployees || loadingPayments;
 
