@@ -29,7 +29,7 @@ export const EmployeePaymentsPanel = () => {
   const [editEmployeeDialogOpen, setEditEmployeeDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<{ id: string; name: string; role: string; salary: number } | null>(null);
   const [newEmployee, setNewEmployee] = useState({ name: "", role: "", email: null as string | null, phone: null as string | null, salary: 0, hire_date: new Date().toISOString().split('T')[0], active: true });
-  const [newPayment, setNewPayment] = useState({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1, status: "pending" });
+  const [newPayment, setNewPayment] = useState({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1 });
 
   const handleCreateEmployee = async () => {
     if (!newEmployee.name) {
@@ -62,13 +62,12 @@ export const EmployeePaymentsPanel = () => {
           amount: newPayment.amount,
           payment_date: paymentDate.toISOString().split('T')[0],
           payment_type: newPayment.payment_type,
-          description: numInstallments > 1 ? `${newPayment.description || ''} (${i + 1}/${numInstallments})`.trim() : newPayment.description,
-          status: i === 0 ? newPayment.status : "pending"
+          description: numInstallments > 1 ? `${newPayment.description || ''} (${i + 1}/${numInstallments})`.trim() : (newPayment.description || null)
         });
       }
       toast.success(numInstallments > 1 ? `${numInstallments} pagamentos registrados!` : "Pagamento registrado!");
       setPaymentDialogOpen(false);
-      setNewPayment({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1, status: "pending" });
+      setNewPayment({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1 });
     } catch {
       toast.error("Erro ao registrar pagamento");
     }
@@ -100,18 +99,7 @@ export const EmployeePaymentsPanel = () => {
     }
   };
 
-  const handleTogglePaymentStatus = async (payment: { id: string; status?: string }) => {
-    const newStatus = payment.status === "paid" ? "pending" : "paid";
-    try {
-      await updatePayment.mutateAsync({ id: payment.id, status: newStatus });
-      toast.success(newStatus === "paid" ? "Pagamento marcado como pago!" : "Pagamento desmarcado");
-    } catch {
-      toast.error("Erro ao atualizar status");
-    }
-  };
-
-  const totalPaid = payments?.filter(p => p.status === "paid").reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-  const totalPending = payments?.filter(p => p.status !== "paid").reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+  const totalPaid = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
   const isLoading = loadingEmployees || loadingPayments;
 

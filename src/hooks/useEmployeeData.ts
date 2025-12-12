@@ -168,6 +168,40 @@ export const useUpdateCommissionStatus = () => {
   });
 };
 
+export const useUpdateEmployee = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...employee }: Partial<Employee> & { id: string }) => {
+      const { error } = await supabase.from("employees").update(employee).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+  });
+};
+
+export const useUpdateEmployeePayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payment }: Partial<EmployeePayment> & { id: string }) => {
+      const { employee, ...updateData } = payment;
+      const { error } = await supabase.from("employee_payments").update(updateData).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employee_payments"] }),
+  });
+};
+
+export const useDeleteEmployeePayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("employee_payments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employee_payments"] }),
+  });
+};
+
 export const useDeleteEmployee = () => {
   const queryClient = useQueryClient();
   return useMutation({
