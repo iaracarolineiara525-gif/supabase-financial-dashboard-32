@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTheme } from '@/hooks/useTheme';
@@ -28,6 +29,7 @@ const signupSchema = loginSchema.extend({
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isResetPassword, setIsResetPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,13 +42,52 @@ export default function Auth() {
   const navigate = useNavigate();
   const { theme } = useTheme();
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResetPassword(true);
+        setIsLogin(true);
+        setIsForgotPassword(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     setLoading(true);
 
     try {
-      if (isForgotPassword) {
+      if (isResetPassword) {
+        if (password.length < 6) {
+          setErrors({ password: 'Senha deve ter pelo menos 6 caracteres' });
+          setLoading(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          setErrors({ confirmPassword: 'Senhas não conferem' });
+          setLoading(false);
+          return;
+        }
+
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) {
+          toast({
+            title: 'Erro',
+            description: error.message,
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Senha alterada!',
+            description: 'Sua senha foi redefinida com sucesso.',
+          });
+          setIsResetPassword(false);
+          navigate('/');
+        }
+      } else if (isForgotPassword) {
         const emailResult = z.string().email('Email inválido').safeParse(email);
         if (!emailResult.success) {
           setErrors({ email: 'Email inválido' });
@@ -162,10 +203,12 @@ export default function Auth() {
         <CardHeader className="text-center space-y-4">
           <div>
             <CardTitle className="text-2xl font-bold">
-              {isForgotPassword ? 'Esqueci minha senha' : isLogin ? 'Entrar' : 'Criar Conta'}
+              {isResetPassword ? 'Redefinir senha' : isForgotPassword ? 'Esqueci minha senha' : isLogin ? 'Entrar' : 'Criar Conta'}
             </CardTitle>
             <CardDescription className="mt-2">
-              {isForgotPassword
+              {isResetPassword
+                ? 'Digite sua nova senha'
+                : isForgotPassword
                 ? 'Digite seu email para receber o link de redefinição'
                 : isLogin 
                   ? 'Acesse o sistema de gestão financeira' 
@@ -176,7 +219,7 @@ export default function Auth() {
         
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && !isForgotPassword && (
+            {!isLogin && !isForgotPassword && !isResetPassword && (
               <div className="space-y-2">
                 <Label htmlFor="displayName">Nome</Label>
                 <div className="relative">
@@ -197,28 +240,30 @@ export default function Auth() {
               </div>
             )}
             
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  disabled={loading}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email}</p>
-              )}
-            </div>
-            
-            {!isForgotPassword && (
+            {!isResetPassword && (
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    disabled={loading}
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
+                )}
+              </div>
+            )}
+            
+            {(!isForgotPassword || isResetPassword) && (
+              <div className="space-y-2">
+                <Label htmlFor="password">{isResetPassword ? 'Nova Senha' : 'Senha'}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -237,7 +282,7 @@ export default function Auth() {
               </div>
             )}
             
-            {!isLogin && !isForgotPassword && (
+            {(!isLogin && !isForgotPassword) || isResetPassword ? (
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirmar Senha</Label>
                 <div className="relative">
@@ -256,9 +301,9 @@ export default function Auth() {
                   <p className="text-sm text-destructive">{errors.confirmPassword}</p>
                 )}
               </div>
-            )}
+            ) : null}
 
-            {isLogin && !isForgotPassword && (
+            {isLogin && !isForgotPassword && !isResetPassword && (
               <div className="text-right">
                 <button
                   type="button"
@@ -280,6 +325,8 @@ export default function Auth() {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Aguarde...
                 </>
+              ) : isResetPassword ? (
+                'Redefinir senha'
               ) : isForgotPassword ? (
                 'Enviar email'
               ) : isLogin ? (
@@ -291,7 +338,7 @@ export default function Auth() {
           </form>
           
           <div className="mt-6 text-center space-y-2">
-            {isForgotPassword ? (
+            {isResetPassword ? null : isForgotPassword ? (
               <button
                 type="button"
                 onClick={() => {
