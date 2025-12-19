@@ -227,6 +227,7 @@ export type Database = {
       }
       installments: {
         Row: {
+          boleto_fee: number | null
           contract_id: string
           created_at: string
           due_date: string
@@ -243,6 +244,7 @@ export type Database = {
           value: number
         }
         Insert: {
+          boleto_fee?: number | null
           contract_id: string
           created_at?: string
           due_date: string
@@ -259,6 +261,7 @@ export type Database = {
           value: number
         }
         Update: {
+          boleto_fee?: number | null
           contract_id?: string
           created_at?: string
           due_date?: string

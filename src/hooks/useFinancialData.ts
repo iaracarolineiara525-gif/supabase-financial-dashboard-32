@@ -32,6 +32,7 @@ export interface Installment {
   payment_method: string | null;
   gross_value: number | null;
   net_value: number | null;
+  boleto_fee: number | null;
 }
 
 export interface ClientWithDebt {
