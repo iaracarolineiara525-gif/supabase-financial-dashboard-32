@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserPlus, CalendarIcon } from "lucide-react";
@@ -25,6 +26,9 @@ const clientSchema = z.object({
   totalInstallments: z.string().min(1, "Número de parcelas é obrigatório"),
   paymentDay: z.string().min(1, "Dia de pagamento é obrigatório"),
   description: z.string().trim().max(255, "Descrição deve ter no máximo 255 caracteres").optional().or(z.literal("")),
+  paymentMethod: z.enum(["cash", "card", "pix"]),
+  grossValue: z.string().optional(),
+  netValue: z.string().optional(),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
@@ -50,8 +54,13 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
       totalInstallments: "",
       paymentDay: "",
       description: "",
+      paymentMethod: "cash",
+      grossValue: "",
+      netValue: "",
     },
   });
+
+  const paymentMethod = form.watch("paymentMethod");
 
   const onSubmit = async (data: ClientFormData) => {
     setIsSubmitting(true);
@@ -98,6 +107,12 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      // Parse gross and net values for card payments
+      const grossValue = data.grossValue ? parseFloat(data.grossValue.replace(/[^\d,.-]/g, "").replace(",", ".")) : null;
+      const netValue = data.netValue ? parseFloat(data.netValue.replace(/[^\d,.-]/g, "").replace(",", ".")) : null;
+      const grossPerInstallment = grossValue ? grossValue / totalInstallments : null;
+      const netPerInstallment = netValue ? netValue / totalInstallments : null;
+
       for (let i = 1; i <= totalInstallments; i++) {
         const dueDate = new Date(entryDate.getFullYear(), entryDate.getMonth() + i, paymentDay);
         // Check if overdue based on current date
@@ -110,6 +125,9 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
           due_date: dueDate.toISOString().split("T")[0],
           status: isOverdue ? "overdue" : "open",
           expected_end_date: expectedEndDate.toISOString().split("T")[0],
+          payment_method: data.paymentMethod,
+          gross_value: grossPerInstallment,
+          net_value: netPerInstallment,
         });
       }
 
@@ -325,6 +343,58 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="paymentMethod"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>Método de Pagamento *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o método" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="cash">Dinheiro</SelectItem>
+                          <SelectItem value="card">Cartão</SelectItem>
+                          <SelectItem value="pix">PIX</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {paymentMethod === "card" && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="grossValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor Bruto (Total)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" placeholder="1100.00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="netValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor Líquido (Total)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" placeholder="1000.00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
               </div>
             </div>
 

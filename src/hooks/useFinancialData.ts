@@ -29,6 +29,9 @@ export interface Installment {
   paid_date: string | null;
   status: "open" | "paid" | "overdue";
   expected_end_date: string | null;
+  payment_method: string | null;
+  gross_value: number | null;
+  net_value: number | null;
 }
 
 export interface ClientWithDebt {
