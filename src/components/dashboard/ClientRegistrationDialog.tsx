@@ -22,13 +22,17 @@ const clientSchema = z.object({
   phone: z.string().trim().max(20, "Telefone deve ter no máximo 20 caracteres").optional().or(z.literal("")),
   entryDate: z.date().optional(),
   exitDate: z.date().optional(),
+  paymentMethod: z.enum(["cash", "credit_card", "debit_card", "pix", "boleto"]),
+  // Contract fields
   totalValue: z.string().min(1, "Valor total é obrigatório"),
   totalInstallments: z.string().min(1, "Número de parcelas é obrigatório"),
   paymentDay: z.string().min(1, "Dia de pagamento é obrigatório"),
   description: z.string().trim().max(255, "Descrição deve ter no máximo 255 caracteres").optional().or(z.literal("")),
-  paymentMethod: z.enum(["cash", "card", "pix"]),
+  // Card specific fields
   grossValue: z.string().optional(),
   netValue: z.string().optional(),
+  // Boleto specific fields
+  boletoFee: z.string().optional(),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
@@ -50,17 +54,20 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
       phone: "",
       entryDate: new Date(),
       exitDate: undefined,
+      paymentMethod: "cash",
       totalValue: "",
       totalInstallments: "",
       paymentDay: "",
       description: "",
-      paymentMethod: "cash",
       grossValue: "",
       netValue: "",
+      boletoFee: "",
     },
   });
 
   const paymentMethod = form.watch("paymentMethod");
+  const isCardPayment = paymentMethod === "credit_card" || paymentMethod === "debit_card";
+  const isBoleto = paymentMethod === "boleto";
 
   const onSubmit = async (data: ClientFormData) => {
     setIsSubmitting(true);
@@ -288,6 +295,90 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
               />
             </div>
 
+            {/* Payment Method Section - Before Contract Data */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="font-medium mb-4">Método de Pagamento</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="paymentMethod"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>Forma de Pagamento *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a forma de pagamento" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="cash">Dinheiro</SelectItem>
+                          <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                          <SelectItem value="debit_card">Cartão de Débito</SelectItem>
+                          <SelectItem value="pix">PIX</SelectItem>
+                          <SelectItem value="boleto">Boleto</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Card-specific fields */}
+                {isCardPayment && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="grossValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor Bruto (Total)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" placeholder="Valor cobrado do cliente" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="netValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor Líquido (Total)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" placeholder="Valor que você recebe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <p className="text-xs text-muted-foreground col-span-2">
+                      O valor bruto é o que o cliente paga. O valor líquido é o que você recebe após as taxas da máquina.
+                    </p>
+                  </>
+                )}
+
+                {/* Boleto-specific fields */}
+                {isBoleto && (
+                  <FormField
+                    control={form.control}
+                    name="boletoFee"
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Taxa do Boleto (por unidade)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="Ex: 3.50" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Contract Data Section */}
             <div className="border-t pt-4 mt-4">
               <h3 className="font-medium mb-4">Dados do Contrato</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -343,58 +434,6 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="paymentMethod"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Método de Pagamento *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o método" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="cash">Dinheiro</SelectItem>
-                          <SelectItem value="card">Cartão</SelectItem>
-                          <SelectItem value="pix">PIX</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {paymentMethod === "card" && (
-                  <>
-                    <FormField
-                      control={form.control}
-                      name="grossValue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valor Bruto (Total)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" placeholder="1100.00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="netValue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valor Líquido (Total)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" placeholder="1000.00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                )}
               </div>
             </div>
 
