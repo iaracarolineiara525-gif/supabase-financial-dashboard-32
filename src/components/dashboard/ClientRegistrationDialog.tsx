@@ -115,10 +115,14 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
       today.setHours(0, 0, 0, 0);
 
       // Parse gross and net values for card payments
-      const grossValue = data.grossValue ? parseFloat(data.grossValue.replace(/[^\d,.-]/g, "").replace(",", ".")) : null;
-      const netValue = data.netValue ? parseFloat(data.netValue.replace(/[^\d,.-]/g, "").replace(",", ".")) : null;
+      const isCardPaymentMethod = data.paymentMethod === "credit_card" || data.paymentMethod === "debit_card";
+      const grossValue = isCardPaymentMethod && data.grossValue ? parseFloat(data.grossValue.replace(/[^\d,.-]/g, "").replace(",", ".")) : null;
+      const netValue = isCardPaymentMethod && data.netValue ? parseFloat(data.netValue.replace(/[^\d,.-]/g, "").replace(",", ".")) : null;
       const grossPerInstallment = grossValue ? grossValue / totalInstallments : null;
       const netPerInstallment = netValue ? netValue / totalInstallments : null;
+
+      // Parse boleto fee
+      const boletoFee = data.paymentMethod === "boleto" && data.boletoFee ? parseFloat(data.boletoFee.replace(/[^\d,.-]/g, "").replace(",", ".")) : null;
 
       for (let i = 1; i <= totalInstallments; i++) {
         const dueDate = new Date(entryDate.getFullYear(), entryDate.getMonth() + i, paymentDay);
@@ -135,6 +139,7 @@ export function ClientRegistrationDialog({ onClientCreated }: ClientRegistration
           payment_method: data.paymentMethod,
           gross_value: grossPerInstallment,
           net_value: netPerInstallment,
+          boleto_fee: boletoFee,
         });
       }
 
