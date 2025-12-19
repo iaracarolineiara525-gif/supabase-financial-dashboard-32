@@ -231,9 +231,12 @@ export type Database = {
           created_at: string
           due_date: string
           expected_end_date: string | null
+          gross_value: number | null
           id: string
           installment_number: number
+          net_value: number | null
           paid_date: string | null
+          payment_method: string | null
           status: string
           total_installments: number
           updated_at: string
@@ -244,9 +247,12 @@ export type Database = {
           created_at?: string
           due_date: string
           expected_end_date?: string | null
+          gross_value?: number | null
           id?: string
           installment_number: number
+          net_value?: number | null
           paid_date?: string | null
+          payment_method?: string | null
           status?: string
           total_installments: number
           updated_at?: string
@@ -257,9 +263,12 @@ export type Database = {
           created_at?: string
           due_date?: string
           expected_end_date?: string | null
+          gross_value?: number | null
           id?: string
           installment_number?: number
+          net_value?: number | null
           paid_date?: string | null
+          payment_method?: string | null
           status?: string
           total_installments?: number
           updated_at?: string
