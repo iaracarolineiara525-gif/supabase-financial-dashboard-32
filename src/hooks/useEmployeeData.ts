@@ -20,6 +20,7 @@ export interface EmployeePayment {
   payment_date: string;
   payment_type: string;
   description: string | null;
+  receipt_url: string | null;
   created_at: string;
   employee?: Employee;
 }

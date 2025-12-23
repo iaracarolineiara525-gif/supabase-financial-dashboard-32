@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEmployees, useEmployeePayments, useCreateEmployee, useCreateEmployeePayment, useDeleteEmployee, useUpdateEmployee, useUpdateEmployeePayment, useDeleteEmployeePayment } from "@/hooks/useEmployeeData";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Users, Plus, DollarSign, Calendar, Trash2, Pencil, CheckCircle2, Clock } from "lucide-react";
+import { Users, Plus, DollarSign, Calendar, Trash2, Pencil, CheckCircle2, Clock, TrendingUp, Upload, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { DateFilters } from "./DateFilters";
+import { EmployeePaymentHistoryDialog } from "./EmployeePaymentHistoryDialog";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 
 export const EmployeePaymentsPanel = () => {
   const [filters, setFilters] = useState<{ year?: number; month?: number; day?: number }>({});
@@ -27,9 +31,11 @@ export const EmployeePaymentsPanel = () => {
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [editEmployeeDialogOpen, setEditEmployeeDialogOpen] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<{ id: string; name: string; role: string; salary: number } | null>(null);
   const [newEmployee, setNewEmployee] = useState({ name: "", role: "", email: null as string | null, phone: null as string | null, salary: 0, hire_date: new Date().toISOString().split('T')[0], active: true });
-  const [newPayment, setNewPayment] = useState({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1 });
+  const [newPayment, setNewPayment] = useState({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1, receiptFile: null as File | null });
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
   const handleCreateEmployee = async () => {
     if (!newEmployee.name) {
@@ -52,8 +58,29 @@ export const EmployeePaymentsPanel = () => {
       return;
     }
     try {
+      setUploadingReceipt(true);
       const baseDate = new Date(newPayment.payment_date);
       const numInstallments = newPayment.installments || 1;
+      
+      // Upload receipt if provided
+      let receiptUrl: string | null = null;
+      if (newPayment.receiptFile) {
+        const fileExt = newPayment.receiptFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('payment-receipts')
+          .upload(fileName, newPayment.receiptFile);
+        
+        if (uploadError) {
+          console.error("Error uploading receipt:", uploadError);
+          toast.error("Erro ao fazer upload do extrato");
+        } else {
+          const { data: urlData } = supabase.storage
+            .from('payment-receipts')
+            .getPublicUrl(fileName);
+          receiptUrl = urlData.publicUrl;
+        }
+      }
       
       for (let i = 0; i < numInstallments; i++) {
         const paymentDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate());
@@ -62,14 +89,17 @@ export const EmployeePaymentsPanel = () => {
           amount: newPayment.amount,
           payment_date: paymentDate.toISOString().split('T')[0],
           payment_type: newPayment.payment_type,
-          description: numInstallments > 1 ? `${newPayment.description || ''} (${i + 1}/${numInstallments})`.trim() : (newPayment.description || null)
+          description: numInstallments > 1 ? `${newPayment.description || ''} (${i + 1}/${numInstallments})`.trim() : (newPayment.description || null),
+          receipt_url: i === 0 ? receiptUrl : null // Only first payment gets the receipt
         });
       }
       toast.success(numInstallments > 1 ? `${numInstallments} pagamentos registrados!` : "Pagamento registrado!");
       setPaymentDialogOpen(false);
-      setNewPayment({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1 });
+      setNewPayment({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1, receiptFile: null });
     } catch {
       toast.error("Erro ao registrar pagamento");
+    } finally {
+      setUploadingReceipt(false);
     }
   };
 
@@ -100,6 +130,30 @@ export const EmployeePaymentsPanel = () => {
   };
 
   const totalPaid = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+
+  // Group payments by month
+  const paymentsByMonth = useMemo(() => {
+    if (!payments) return [];
+    const grouped: Record<string, typeof payments> = {};
+    
+    payments.forEach(payment => {
+      const monthKey = format(parseISO(payment.payment_date), "MMMM 'de' yyyy", { locale: ptBR });
+      if (!grouped[monthKey]) {
+        grouped[monthKey] = [];
+      }
+      grouped[monthKey].push(payment);
+    });
+
+    return Object.entries(grouped).sort(([, a], [, b]) => {
+      const dateA = a[0]?.payment_date || "";
+      const dateB = b[0]?.payment_date || "";
+      return dateB.localeCompare(dateA);
+    });
+  }, [payments]);
+
+  const getDayOfWeek = (dateStr: string) => {
+    return format(parseISO(dateStr), "EEEE", { locale: ptBR });
+  };
 
   const isLoading = loadingEmployees || loadingPayments;
 
@@ -132,7 +186,11 @@ export const EmployeePaymentsPanel = () => {
             </CardTitle>
             <CardDescription>Controle de pagamentos</CardDescription>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="outline" className="border-border/50" onClick={() => setHistoryDialogOpen(true)}>
+              <TrendingUp className="h-4 w-4 mr-1" />
+              Histórico
+            </Button>
             <Dialog open={employeeDialogOpen} onOpenChange={setEmployeeDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" variant="outline" className="border-border/50">
@@ -216,7 +274,26 @@ export const EmployeePaymentsPanel = () => {
                     <Label>Descrição</Label>
                     <Input value={newPayment.description} onChange={(e) => setNewPayment({ ...newPayment, description: e.target.value })} placeholder="Observação" />
                   </div>
-                  <Button onClick={handleCreatePayment} className="w-full">Registrar</Button>
+                  <div>
+                    <Label>Extrato/Comprovante</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setNewPayment({ ...newPayment, receiptFile: e.target.files?.[0] || null })}
+                        className="text-sm"
+                      />
+                      {newPayment.receiptFile && (
+                        <Badge variant="secondary" className="text-xs">
+                          <FileText className="h-3 w-3 mr-1" />
+                          {newPayment.receiptFile.name.slice(0, 15)}...
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <Button onClick={handleCreatePayment} className="w-full" disabled={uploadingReceipt}>
+                    {uploadingReceipt ? "Enviando..." : "Registrar"}
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -257,38 +334,76 @@ export const EmployeePaymentsPanel = () => {
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Pagamentos Recentes</h4>
-          <ScrollArea className="h-[200px]">
-            <div className="space-y-2">
-              {payments?.map((payment) => (
-                <div key={payment.id} className="p-3 bg-background/50 rounded-lg border border-border/30">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium text-sm">{payment.employee?.name}</p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(payment.payment_date)}
-                      </p>
+          <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Pagamentos por Mês</h4>
+          <ScrollArea className="h-[250px]">
+            <div className="space-y-3">
+              {paymentsByMonth.map(([month, monthPayments]) => {
+                const monthTotal = monthPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+                
+                return (
+                  <div key={month} className="space-y-2">
+                    <div className="flex items-center justify-between bg-secondary/40 px-3 py-2 rounded-lg">
+                      <h5 className="font-medium text-sm capitalize">{month}</h5>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold text-primary">{formatCurrency(monthTotal)}</span>
+                        <span className="text-xs text-muted-foreground ml-2">({monthPayments.length})</span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-sm">{formatCurrency(payment.amount)}</p>
-                      <Badge variant="secondary" className="text-xs">
-                        {payment.payment_type === "salary" ? "Salário" : payment.payment_type === "bonus" ? "Bônus" : "Adiantamento"}
-                      </Badge>
+                    
+                    <div className="space-y-1 pl-2">
+                      {monthPayments.map((payment) => (
+                        <div key={payment.id} className="flex items-center justify-between p-2 bg-background/50 rounded border border-border/20">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">{payment.employee?.name}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {payment.payment_type === "salary" ? "Salário" : payment.payment_type === "bonus" ? "Bônus" : "Adiantamento"}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              <Calendar className="h-3 w-3" />
+                              <span>{formatDate(payment.payment_date)}</span>
+                              <span className="capitalize">({getDayOfWeek(payment.payment_date)})</span>
+                            </div>
+                            {payment.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{payment.description}</p>
+                            )}
+                          </div>
+                          <div className="text-right flex items-center gap-2">
+                            <span className="font-semibold text-sm">{formatCurrency(payment.amount)}</span>
+                            {payment.receipt_url && (
+                              <a 
+                                href={payment.receipt_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-primary hover:text-primary/80"
+                                title="Ver extrato"
+                              >
+                                <FileText className="h-4 w-4" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  {payment.description && (
-                    <p className="text-xs text-muted-foreground mt-1">{payment.description}</p>
-                  )}
-                </div>
-              ))}
-              {payments?.length === 0 && (
+                );
+              })}
+              
+              {paymentsByMonth.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum pagamento no período</p>
               )}
             </div>
           </ScrollArea>
         </div>
       </CardContent>
+
+      <EmployeePaymentHistoryDialog
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        employees={employees || []}
+        payments={payments || []}
+      />
     </Card>
   );
 };
