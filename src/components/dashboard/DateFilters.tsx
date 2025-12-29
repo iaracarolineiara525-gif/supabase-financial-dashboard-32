@@ -44,13 +44,13 @@ export const DateFilters = ({ filters, onFiltersChange }: DateFiltersProps) => {
       <Calendar className="h-4 w-4 text-muted-foreground" />
       
       <Select
-        value={filters.year?.toString() || ""}
+        value={filters.year?.toString() ?? undefined}
         onValueChange={(v) => onFiltersChange({ ...filters, year: v ? Number(v) : undefined, month: undefined, day: undefined })}
       >
         <SelectTrigger className="w-[100px] h-8 text-xs bg-secondary/50 border-border/50">
           <SelectValue placeholder="Ano" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-popover border border-border z-50">
           {years.map((year) => (
             <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
           ))}
@@ -58,14 +58,14 @@ export const DateFilters = ({ filters, onFiltersChange }: DateFiltersProps) => {
       </Select>
 
       <Select
-        value={filters.month?.toString() || ""}
+        value={filters.month?.toString() ?? undefined}
         onValueChange={(v) => onFiltersChange({ ...filters, month: v ? Number(v) : undefined, day: undefined })}
         disabled={!filters.year}
       >
         <SelectTrigger className="w-[120px] h-8 text-xs bg-secondary/50 border-border/50">
           <SelectValue placeholder="Mês" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-popover border border-border z-50">
           {months.map((month) => (
             <SelectItem key={month.value} value={month.value.toString()}>{month.label}</SelectItem>
           ))}
@@ -73,14 +73,14 @@ export const DateFilters = ({ filters, onFiltersChange }: DateFiltersProps) => {
       </Select>
 
       <Select
-        value={filters.day?.toString() || ""}
+        value={filters.day?.toString() ?? undefined}
         onValueChange={(v) => onFiltersChange({ ...filters, day: v ? Number(v) : undefined })}
         disabled={!filters.month}
       >
         <SelectTrigger className="w-[80px] h-8 text-xs bg-secondary/50 border-border/50">
           <SelectValue placeholder="Dia" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-popover border border-border z-50">
           {days.map((day) => (
             <SelectItem key={day} value={day.toString()}>{day}</SelectItem>
           ))}
