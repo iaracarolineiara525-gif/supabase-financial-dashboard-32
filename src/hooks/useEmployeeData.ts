@@ -63,11 +63,9 @@ export const useEmployeePayments = (filters?: { year?: number; month?: number; d
         .order("payment_date", { ascending: false });
 
       if (filters?.year) {
-        const startDate = new Date(filters.year, filters.month ? filters.month - 1 : 0, filters.day || 1);
-        const endDate = new Date(filters.year, filters.month ? filters.month - 1 : 11, filters.day || 31);
-        
-        if (filters.day) {
-          query = query.eq("payment_date", startDate.toISOString().split('T')[0]);
+        if (filters.day && filters.month) {
+          const dateStr = `${filters.year}-${String(filters.month).padStart(2, '0')}-${String(filters.day).padStart(2, '0')}`;
+          query = query.eq("payment_date", dateStr);
         } else if (filters.month) {
           const lastDay = new Date(filters.year, filters.month, 0).getDate();
           query = query
