@@ -21,6 +21,7 @@ export interface EmployeePayment {
   payment_type: string;
   description: string | null;
   receipt_url: string | null;
+  status: string;
   created_at: string;
   employee?: Employee;
 }
