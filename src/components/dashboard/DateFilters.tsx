@@ -29,9 +29,11 @@ export const DateFilters = ({ filters, onFiltersChange }: DateFiltersProps) => {
     return new Date(year, month, 0).getDate();
   };
 
-  const days = filters.year && filters.month
-    ? Array.from({ length: getDaysInMonth(filters.year, filters.month) }, (_, i) => i + 1)
-    : [];
+  // Use current year if no year is selected for calculating days in month
+  const effectiveYear = filters.year || currentYear;
+  const effectiveMonth = filters.month || 1;
+  
+  const days = Array.from({ length: getDaysInMonth(effectiveYear, effectiveMonth) }, (_, i) => i + 1);
 
   const clearFilters = () => {
     onFiltersChange({});
@@ -64,7 +66,6 @@ export const DateFilters = ({ filters, onFiltersChange }: DateFiltersProps) => {
       <Select
         value={filters.month?.toString() || ""}
         onValueChange={(v) => onFiltersChange({ ...filters, month: v ? Number(v) : undefined, day: undefined })}
-        disabled={!filters.year}
       >
         <SelectTrigger className="w-[120px] h-8 text-xs bg-background border-border">
           <SelectValue placeholder="Mês" />
@@ -83,7 +84,6 @@ export const DateFilters = ({ filters, onFiltersChange }: DateFiltersProps) => {
       <Select
         value={filters.day?.toString() || ""}
         onValueChange={(v) => onFiltersChange({ ...filters, day: v ? Number(v) : undefined })}
-        disabled={!filters.month}
       >
         <SelectTrigger className="w-[80px] h-8 text-xs bg-background border-border">
           <SelectValue placeholder="Dia" />
