@@ -40,7 +40,7 @@ export const DateFilters = ({ filters, onFiltersChange }: DateFiltersProps) => {
   const hasFilters = filters.year || filters.month || filters.day;
 
   return (
-    <div className="flex flex-wrap gap-2 items-center">
+    <div className="flex flex-wrap gap-2 items-center relative">
       <Calendar className="h-4 w-4 text-muted-foreground" />
       
       <Select
@@ -50,7 +50,11 @@ export const DateFilters = ({ filters, onFiltersChange }: DateFiltersProps) => {
         <SelectTrigger className="w-[100px] h-8 text-xs bg-background border-border">
           <SelectValue placeholder="Ano" />
         </SelectTrigger>
-        <SelectContent className="bg-background border border-border z-[100]">
+        <SelectContent 
+          className="bg-background border border-border pointer-events-auto" 
+          position="popper" 
+          sideOffset={4}
+        >
           {years.map((year) => (
             <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
           ))}
@@ -62,10 +66,14 @@ export const DateFilters = ({ filters, onFiltersChange }: DateFiltersProps) => {
         onValueChange={(v) => onFiltersChange({ ...filters, month: v ? Number(v) : undefined, day: undefined })}
         disabled={!filters.year}
       >
-        <SelectTrigger className="w-[120px] h-8 text-xs bg-background border-border disabled:opacity-50">
+        <SelectTrigger className="w-[120px] h-8 text-xs bg-background border-border">
           <SelectValue placeholder="Mês" />
         </SelectTrigger>
-        <SelectContent className="bg-background border border-border z-[100]">
+        <SelectContent 
+          className="bg-background border border-border pointer-events-auto" 
+          position="popper" 
+          sideOffset={4}
+        >
           {months.map((month) => (
             <SelectItem key={month.value} value={month.value.toString()}>{month.label}</SelectItem>
           ))}
@@ -77,10 +85,14 @@ export const DateFilters = ({ filters, onFiltersChange }: DateFiltersProps) => {
         onValueChange={(v) => onFiltersChange({ ...filters, day: v ? Number(v) : undefined })}
         disabled={!filters.month}
       >
-        <SelectTrigger className="w-[80px] h-8 text-xs bg-background border-border disabled:opacity-50">
+        <SelectTrigger className="w-[80px] h-8 text-xs bg-background border-border">
           <SelectValue placeholder="Dia" />
         </SelectTrigger>
-        <SelectContent className="bg-background border border-border z-[100]">
+        <SelectContent 
+          className="bg-background border border-border pointer-events-auto" 
+          position="popper" 
+          sideOffset={4}
+        >
           {days.map((day) => (
             <SelectItem key={day} value={day.toString()}>{day}</SelectItem>
           ))}
