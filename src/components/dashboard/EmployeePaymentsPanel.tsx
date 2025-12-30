@@ -31,8 +31,10 @@ export const EmployeePaymentsPanel = () => {
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [editEmployeeDialogOpen, setEditEmployeeDialogOpen] = useState(false);
+  const [editPaymentDialogOpen, setEditPaymentDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<{ id: string; name: string; role: string; salary: number } | null>(null);
+  const [editingPayment, setEditingPayment] = useState<{ id: string; amount: number; payment_date: string; payment_type: string; description: string; status: string } | null>(null);
   const [newEmployee, setNewEmployee] = useState({ name: "", role: "", email: null as string | null, phone: null as string | null, salary: 0, hire_date: new Date().toISOString().split('T')[0], active: true });
   const [newPayment, setNewPayment] = useState({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1, receiptFile: null as File | null });
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
@@ -90,7 +92,8 @@ export const EmployeePaymentsPanel = () => {
           payment_date: paymentDate.toISOString().split('T')[0],
           payment_type: newPayment.payment_type,
           description: numInstallments > 1 ? `${newPayment.description || ''} (${i + 1}/${numInstallments})`.trim() : (newPayment.description || null),
-          receipt_url: i === 0 ? receiptUrl : null // Only first payment gets the receipt
+          receipt_url: i === 0 ? receiptUrl : null,
+          status: "paid"
         });
       }
       toast.success(numInstallments > 1 ? `${numInstallments} pagamentos registrados!` : "Pagamento registrado!");
@@ -126,6 +129,49 @@ export const EmployeePaymentsPanel = () => {
       setEditingEmployee(null);
     } catch {
       toast.error("Erro ao atualizar colaborador");
+    }
+  };
+
+  const handleEditPayment = (payment: { id: string; amount: number; payment_date: string; payment_type: string; description: string | null; status: string }) => {
+    setEditingPayment({ 
+      id: payment.id, 
+      amount: payment.amount, 
+      payment_date: payment.payment_date, 
+      payment_type: payment.payment_type, 
+      description: payment.description || "", 
+      status: payment.status 
+    });
+    setEditPaymentDialogOpen(true);
+  };
+
+  const handleUpdatePayment = async () => {
+    if (!editingPayment) return;
+    try {
+      await updatePayment.mutateAsync(editingPayment);
+      toast.success("Pagamento atualizado!");
+      setEditPaymentDialogOpen(false);
+      setEditingPayment(null);
+    } catch {
+      toast.error("Erro ao atualizar pagamento");
+    }
+  };
+
+  const handleTogglePaymentStatus = async (payment: { id: string; status: string }) => {
+    const newStatus = payment.status === "paid" ? "pending" : "paid";
+    try {
+      await updatePayment.mutateAsync({ id: payment.id, status: newStatus });
+      toast.success(newStatus === "paid" ? "Marcado como pago!" : "Marcado como pendente!");
+    } catch {
+      toast.error("Erro ao atualizar status");
+    }
+  };
+
+  const handleDeletePayment = async (id: string) => {
+    try {
+      await deletePayment.mutateAsync(id);
+      toast.success("Pagamento excluído!");
+    } catch {
+      toast.error("Erro ao excluir pagamento");
     }
   };
 
@@ -297,6 +343,57 @@ export const EmployeePaymentsPanel = () => {
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Edit Payment Dialog */}
+            <Dialog open={editPaymentDialogOpen} onOpenChange={setEditPaymentDialogOpen}>
+              <DialogContent className="glass-card border-border/50">
+                <DialogHeader>
+                  <DialogTitle>Editar Pagamento</DialogTitle>
+                </DialogHeader>
+                {editingPayment && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Valor</Label>
+                      <Input type="number" value={editingPayment.amount} onChange={(e) => setEditingPayment({ ...editingPayment, amount: Number(e.target.value) })} />
+                    </div>
+                    <div>
+                      <Label>Data do Pagamento</Label>
+                      <Input type="date" value={editingPayment.payment_date} onChange={(e) => setEditingPayment({ ...editingPayment, payment_date: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Tipo</Label>
+                      <Select value={editingPayment.payment_type} onValueChange={(v) => setEditingPayment({ ...editingPayment, payment_type: v })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border border-border z-[100]">
+                          <SelectItem value="salary">Salário</SelectItem>
+                          <SelectItem value="bonus">Bônus</SelectItem>
+                          <SelectItem value="advance">Adiantamento</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Status</Label>
+                      <Select value={editingPayment.status} onValueChange={(v) => setEditingPayment({ ...editingPayment, status: v })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border border-border z-[100]">
+                          <SelectItem value="paid">Pago</SelectItem>
+                          <SelectItem value="pending">Pendente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Descrição</Label>
+                      <Input value={editingPayment.description} onChange={(e) => setEditingPayment({ ...editingPayment, description: e.target.value })} placeholder="Observação" />
+                    </div>
+                    <Button onClick={handleUpdatePayment} className="w-full">Salvar</Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </CardHeader>
@@ -359,6 +456,17 @@ export const EmployeePaymentsPanel = () => {
                               <Badge variant="secondary" className="text-xs">
                                 {payment.payment_type === "salary" ? "Salário" : payment.payment_type === "bonus" ? "Bônus" : "Adiantamento"}
                               </Badge>
+                              <Badge 
+                                variant={payment.status === "paid" ? "default" : "outline"} 
+                                className={`text-xs cursor-pointer ${payment.status === "paid" ? "bg-green-500/20 text-green-600 border-green-500/30" : "bg-yellow-500/20 text-yellow-600 border-yellow-500/30"}`}
+                                onClick={() => handleTogglePaymentStatus(payment)}
+                              >
+                                {payment.status === "paid" ? (
+                                  <><CheckCircle2 className="h-3 w-3 mr-1" /> Pago</>
+                                ) : (
+                                  <><Clock className="h-3 w-3 mr-1" /> Pendente</>
+                                )}
+                              </Badge>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                               <Calendar className="h-3 w-3" />
@@ -382,6 +490,12 @@ export const EmployeePaymentsPanel = () => {
                                 <FileText className="h-4 w-4" />
                               </a>
                             )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditPayment(payment)}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeletePayment(payment.id)}>
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
                           </div>
                         </div>
                       ))}

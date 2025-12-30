@@ -62,6 +62,8 @@ export const useEmployeePayments = (filters?: { year?: number; month?: number; d
         .from("employee_payments")
         .select(`*, employee:employees(*)`)
         .order("payment_date", { ascending: false });
+      
+      // Note: status column is now available from the database
 
       if (filters?.year) {
         if (filters.day && filters.month) {
