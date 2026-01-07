@@ -7,6 +7,7 @@ import { StatusValueCrossView } from "@/components/dashboard/StatusValueCrossVie
 import { RevenuePanel } from "@/components/dashboard/RevenuePanel";
 import { EmployeePaymentsPanel } from "@/components/dashboard/EmployeePaymentsPanel";
 import { CommissionsPanel } from "@/components/dashboard/CommissionsPanel";
+import { FixedBillsPanel } from "@/components/dashboard/FixedBillsPanel";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { ClientRegistrationDialog } from "@/components/dashboard/ClientRegistrationDialog";
 import { ExportDialog } from "@/components/dashboard/ExportDialog";
@@ -14,8 +15,9 @@ import { GPNLogo } from "@/components/GPNLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDashboardKPIs, useInstallments } from "@/hooks/useFinancialData";
 import { useEmployees, useEmployeePayments, useCommissions } from "@/hooks/useEmployeeData";
+import { useFixedBillsWithInstallments } from "@/hooks/useFixedBillsData";
 import { formatCurrency } from "@/lib/formatters";
-import { Users, AlertCircle, BarChart3, DollarSign, TrendingUp, Calendar, RefreshCw, Wallet, Percent, Menu, CheckCircle, Clock, LogOut } from "lucide-react";
+import { Users, AlertCircle, BarChart3, DollarSign, TrendingUp, Calendar, RefreshCw, Wallet, Percent, Menu, CheckCircle, Clock, LogOut, Receipt } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
@@ -30,6 +32,7 @@ const menuItems = [
   { id: "receita", label: "Receita", icon: TrendingUp },
   { id: "funcionarios", label: "Funcionários", icon: Wallet },
   { id: "comissoes", label: "Comissões", icon: Percent },
+  { id: "contasfixas", label: "Contas Fixas", icon: Receipt },
 ];
 
 const Index = () => {
@@ -41,6 +44,7 @@ const Index = () => {
   const { data: employees } = useEmployees();
   const { data: employeePayments } = useEmployeePayments();
   const { data: commissions } = useCommissions();
+  const { data: fixedBills } = useFixedBillsWithInstallments();
   const queryClient = useQueryClient();
   const { theme } = useTheme();
   const { user, signOut } = useAuth();
@@ -82,6 +86,15 @@ const Index = () => {
     paidCommissions: commissions?.filter(c => c.status === 'paid')?.length || 0,
     totalValue: commissions?.reduce((sum, c) => sum + c.amount, 0) || 0,
     pendingValue: commissions?.filter(c => c.status === 'pending')?.reduce((sum, c) => sum + c.amount, 0) || 0,
+  };
+
+  const fixedBillKPIs = {
+    totalBills: fixedBills?.length || 0,
+    totalPending: fixedBills?.reduce((sum, b) => sum + b.totalPending, 0) || 0,
+    totalPaid: fixedBills?.reduce((sum, b) => sum + b.totalPaid, 0) || 0,
+    overdueCount: fixedBills?.reduce((sum, b) => {
+      return sum + b.installments.filter(i => i.status !== 'paid' && new Date(i.due_date) < new Date()).length;
+    }, 0) || 0,
   };
 
   const revenueKPIs = {
@@ -145,6 +158,15 @@ const Index = () => {
             <KPICard title="Pagas" value={commissionKPIs.paidCommissions} subtitle="Comissões pagas" icon={CheckCircle} variant="info" />
           </>
         );
+      case "contasfixas":
+        return (
+          <>
+            <KPICard title="Total de Contas" value={fixedBillKPIs.totalBills} subtitle="Contas fixas cadastradas" icon={Receipt} variant="info" />
+            <KPICard title="Valor Pendente" value={formatCurrency(fixedBillKPIs.totalPending)} subtitle="A pagar" icon={Clock} variant="warning" />
+            <KPICard title="Valor Pago" value={formatCurrency(fixedBillKPIs.totalPaid)} subtitle="Já pago" icon={CheckCircle} variant="default" />
+            <KPICard title="Parcelas Atrasadas" value={fixedBillKPIs.overdueCount} subtitle="Requer atenção" icon={AlertCircle} variant="destructive" />
+          </>
+        );
       default:
         return null;
     }
@@ -174,6 +196,8 @@ const Index = () => {
         return <EmployeePaymentsPanel />;
       case "comissoes":
         return <CommissionsPanel />;
+      case "contasfixas":
+        return <FixedBillsPanel />;
       default:
         return null;
     }

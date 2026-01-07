@@ -231,6 +231,83 @@ export type Database = {
         }
         Relationships: []
       }
+      fixed_bill_installments: {
+        Row: {
+          created_at: string
+          due_date: string
+          fixed_bill_id: string
+          id: string
+          installment_number: number
+          paid_date: string | null
+          status: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          due_date: string
+          fixed_bill_id: string
+          id?: string
+          installment_number: number
+          paid_date?: string | null
+          status?: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          due_date?: string
+          fixed_bill_id?: string
+          id?: string
+          installment_number?: number
+          paid_date?: string | null
+          status?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_bill_installments_fixed_bill_id_fkey"
+            columns: ["fixed_bill_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_bills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fixed_bills: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          start_date: string
+          total_installments: number
+          total_value: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          start_date?: string
+          total_installments?: number
+          total_value?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          start_date?: string
+          total_installments?: number
+          total_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       installments: {
         Row: {
           boleto_fee: number | null
