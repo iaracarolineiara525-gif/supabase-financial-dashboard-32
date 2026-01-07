@@ -32,7 +32,7 @@ const menuItems = [
   { id: "receita", label: "Receita", icon: TrendingUp },
   { id: "funcionarios", label: "Funcionários", icon: Wallet },
   { id: "comissoes", label: "Comissões", icon: Percent },
-  { id: "contasfixas", label: "Contas Fixas", icon: Receipt },
+  { id: "contasfixas", label: "Contas - Diversas", icon: Receipt },
 ];
 
 const Index = () => {

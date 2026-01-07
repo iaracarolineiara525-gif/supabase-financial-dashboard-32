@@ -247,7 +247,7 @@ export const FixedBillsPanel = () => {
             <div>
               <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
-                Contas Fixas
+                Contas - Diversas
               </CardTitle>
               {totalStats.totalDiscount > 0 && (
                 <p className="text-sm text-green-400 flex items-center gap-1 mt-1">
