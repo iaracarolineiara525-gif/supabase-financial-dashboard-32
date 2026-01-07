@@ -2,9 +2,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Calendar, X } from "lucide-react";
 
+export interface DateFilterValues {
+  year?: number;
+  month?: number;
+  day?: number;
+}
+
 interface DateFiltersProps {
-  filters: { year?: number; month?: number; day?: number };
-  onFiltersChange: (filters: { year?: number; month?: number; day?: number }) => void;
+  filters: DateFilterValues;
+  onFiltersChange: (filters: DateFilterValues) => void;
 }
 
 const currentYear = new Date().getFullYear();
