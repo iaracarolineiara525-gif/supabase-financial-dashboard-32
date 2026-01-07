@@ -234,33 +234,45 @@ export type Database = {
       fixed_bill_installments: {
         Row: {
           created_at: string
+          discount: number | null
           due_date: string
           fixed_bill_id: string
           id: string
           installment_number: number
+          notes: string | null
+          original_value: number | null
           paid_date: string | null
+          payment_method: string | null
           status: string
           updated_at: string
           value: number
         }
         Insert: {
           created_at?: string
+          discount?: number | null
           due_date: string
           fixed_bill_id: string
           id?: string
           installment_number: number
+          notes?: string | null
+          original_value?: number | null
           paid_date?: string | null
+          payment_method?: string | null
           status?: string
           updated_at?: string
           value: number
         }
         Update: {
           created_at?: string
+          discount?: number | null
           due_date?: string
           fixed_bill_id?: string
           id?: string
           installment_number?: number
+          notes?: string | null
+          original_value?: number | null
           paid_date?: string | null
+          payment_method?: string | null
           status?: string
           updated_at?: string
           value?: number
