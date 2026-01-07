@@ -17,9 +17,13 @@ export interface FixedBillInstallment {
   fixed_bill_id: string;
   installment_number: number;
   value: number;
+  original_value: number | null;
   due_date: string;
   paid_date: string | null;
   status: string;
+  payment_method: string | null;
+  discount: number | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +32,7 @@ export interface FixedBillWithInstallments extends FixedBill {
   installments: FixedBillInstallment[];
   totalPaid: number;
   totalPending: number;
+  totalDiscount: number;
   nextDueDate: string | null;
 }
 
@@ -74,6 +79,7 @@ export const useFixedBillsWithInstallments = () => {
       installments: billInstallments,
       totalPaid: paidInstallments.reduce((sum, i) => sum + i.value, 0),
       totalPending: pendingInstallments.reduce((sum, i) => sum + i.value, 0),
+      totalDiscount: billInstallments.reduce((sum, i) => sum + (i.discount || 0), 0),
       nextDueDate: nextDue?.due_date || null,
     };
   }) || [];
@@ -123,8 +129,11 @@ export const useCreateFixedBill = () => {
           fixed_bill_id: (bill as any).id,
           installment_number: i + 1,
           value: data.installment_value,
+          original_value: data.installment_value,
           due_date: dueDate.toISOString().split("T")[0],
           status: "open",
+          payment_method: "pix",
+          discount: 0,
         });
       }
 
