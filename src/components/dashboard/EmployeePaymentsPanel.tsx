@@ -16,6 +16,7 @@ import { EmployeePaymentHistoryDialog } from "./EmployeePaymentHistoryDialog";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { SearchInput } from "./SearchInput";
 
 export const EmployeePaymentsPanel = () => {
   const [filters, setFilters] = useState<{ year?: number; month?: number; day?: number }>({});
@@ -38,6 +39,18 @@ export const EmployeePaymentsPanel = () => {
   const [newEmployee, setNewEmployee] = useState({ name: "", role: "", email: null as string | null, phone: null as string | null, salary: 0, hire_date: new Date().toISOString().split('T')[0], active: true });
   const [newPayment, setNewPayment] = useState({ employee_id: "", amount: 0, payment_date: new Date().toISOString().split('T')[0], payment_type: "salary", description: "", installments: 1, receiptFile: null as File | null });
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter employees by search term
+  const filteredEmployees = useMemo(() => {
+    if (!employees || !searchTerm.trim()) return employees;
+    const term = searchTerm.toLowerCase();
+    return employees.filter((emp) =>
+      emp.name.toLowerCase().includes(term) ||
+      emp.role?.toLowerCase().includes(term) ||
+      emp.email?.toLowerCase().includes(term)
+    );
+  }, [employees, searchTerm]);
 
   const handleCreateEmployee = async () => {
     if (!newEmployee.name) {
@@ -224,7 +237,7 @@ export const EmployeePaymentsPanel = () => {
   return (
     <Card className="h-full flex flex-col glass-card">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <Users className="h-5 w-5 text-primary" />
@@ -232,7 +245,15 @@ export const EmployeePaymentsPanel = () => {
             </CardTitle>
             <CardDescription>Controle de pagamentos</CardDescription>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="w-full sm:w-64">
+            <SearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Pesquisar funcionário..."
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 flex-wrap mt-4">
             <Button size="sm" variant="outline" className="border-border/50" onClick={() => setHistoryDialogOpen(true)}>
               <TrendingUp className="h-4 w-4 mr-1" />
               Histórico
@@ -395,7 +416,6 @@ export const EmployeePaymentsPanel = () => {
               </DialogContent>
             </Dialog>
           </div>
-        </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-4">
         <DateFilters filters={filters} onFiltersChange={setFilters} />

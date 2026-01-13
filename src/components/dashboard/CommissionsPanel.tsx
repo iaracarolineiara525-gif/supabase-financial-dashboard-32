@@ -12,6 +12,7 @@ import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Percent, Plus, CheckCircle2, Clock, Calendar, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DateFilters } from "./DateFilters";
+import { SearchInput } from "./SearchInput";
 
 export const CommissionsPanel = () => {
   const [filters, setFilters] = useState<{ year?: number; month?: number; day?: number }>({});
@@ -42,6 +43,17 @@ export const CommissionsPanel = () => {
     status: "pending",
     description: ""
   });
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter commissions by search term
+  const filteredCommissions = useMemo(() => {
+    if (!commissions || !searchTerm.trim()) return commissions;
+    const term = searchTerm.toLowerCase();
+    return commissions.filter((c) =>
+      c.employee?.name?.toLowerCase().includes(term) ||
+      c.description?.toLowerCase().includes(term)
+    );
+  }, [commissions, searchTerm]);
 
   // Calculate final value based on percentage
   const calculatedValue = useMemo(() => {
@@ -161,8 +173,8 @@ export const CommissionsPanel = () => {
     }
   };
 
-  const totalPending = commissions?.filter(c => c.status === "pending").reduce((sum, c) => sum + Number(c.amount), 0) || 0;
-  const totalPaid = commissions?.filter(c => c.status === "paid").reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+  const totalPending = filteredCommissions?.filter(c => c.status === "pending").reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+  const totalPaid = filteredCommissions?.filter(c => c.status === "paid").reduce((sum, c) => sum + Number(c.amount), 0) || 0;
 
   if (isLoading) {
     return (
@@ -185,7 +197,7 @@ export const CommissionsPanel = () => {
   return (
     <Card className="h-full flex flex-col glass-card">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <Percent className="h-5 w-5 text-primary" />
@@ -193,6 +205,15 @@ export const CommissionsPanel = () => {
             </CardTitle>
             <CardDescription>Comissões dos colaboradores</CardDescription>
           </div>
+          <div className="w-full sm:w-64">
+            <SearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Pesquisar comissão..."
+            />
+          </div>
+        </div>
+        <div className="flex justify-end mt-4">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
@@ -294,7 +315,7 @@ export const CommissionsPanel = () => {
 
         <ScrollArea className="h-[350px]">
           <div className="space-y-2">
-            {commissions?.map((commission) => (
+            {filteredCommissions?.map((commission) => (
               <div key={commission.id} className={`p-3 rounded-lg border ${commission.status === "paid" ? "bg-success/5 border-success/20" : "bg-warning/5 border-warning/20"}`}>
                 <div className="flex justify-between items-start">
                   <div>
@@ -349,7 +370,7 @@ export const CommissionsPanel = () => {
                 </div>
               </div>
             ))}
-            {commissions?.length === 0 && (
+            {filteredCommissions?.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-8">Nenhuma comissão no período</p>
             )}
           </div>

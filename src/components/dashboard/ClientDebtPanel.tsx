@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { EditClientDialog } from "./EditClientDialog";
 import { DeleteClientDialog } from "./DeleteClientDialog";
+import { SearchInput } from "./SearchInput";
 
 const statusBadgeVariant = (status: string) => {
   switch (status) {
@@ -40,6 +41,18 @@ export const ClientDebtPanel = () => {
   const queryClient = useQueryClient();
   const [editingClient, setEditingClient] = useState<any>(null);
   const [deletingClient, setDeletingClient] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredClients = useMemo(() => {
+    if (!clientsWithDebt || !searchTerm.trim()) return clientsWithDebt;
+    const term = searchTerm.toLowerCase();
+    return clientsWithDebt.filter((item) =>
+      item.client.name.toLowerCase().includes(term) ||
+      item.client.document?.toLowerCase().includes(term) ||
+      item.client.email?.toLowerCase().includes(term) ||
+      item.client.phone?.toLowerCase().includes(term)
+    );
+  }, [clientsWithDebt, searchTerm]);
 
   const handleMarkAsPaid = async (installmentId: string) => {
     try {
@@ -121,16 +134,27 @@ export const ClientDebtPanel = () => {
     <>
       <Card className="h-full flex flex-col glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <User className="h-5 w-5 text-primary" />
-            Parcelas por Cliente
-          </CardTitle>
-          <CardDescription>Foco em Dívida Ativa</CardDescription>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <User className="h-5 w-5 text-primary" />
+                Parcelas por Cliente
+              </CardTitle>
+              <CardDescription>Foco em Dívida Ativa</CardDescription>
+            </div>
+            <div className="w-full sm:w-64">
+              <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Pesquisar cliente..."
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="flex-1">
           <ScrollArea className="h-[500px] pr-4">
             <Accordion type="single" collapsible className="space-y-2">
-              {clientsWithDebt.map((item, index) => (
+              {filteredClients?.map((item, index) => (
                 <AccordionItem
                   key={`${item.client.id}-${item.contract.id}`}
                   value={`${item.client.id}-${item.contract.id}`}

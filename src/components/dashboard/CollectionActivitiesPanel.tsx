@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,14 +8,29 @@ import { useOverdueInstallments, useUpcomingInstallments, useDashboardKPIs } fro
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Phone, Mail, AlertCircle, Clock, Users, DollarSign } from "lucide-react";
 import { KPICard } from "./KPICard";
+import { SearchInput } from "./SearchInput";
 
 export const CollectionActivitiesPanel = () => {
   const { data: overdueInstallments, isLoading: loadingOverdue } = useOverdueInstallments();
   const { data: upcomingInstallments, isLoading: loadingUpcoming } = useUpcomingInstallments();
   const { data: kpis, isLoading: loadingKPIs } = useDashboardKPIs();
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const topOverdue = overdueInstallments?.slice(0, 3) || [];
-  const topUpcoming = upcomingInstallments?.slice(0, 2) || [];
+  const filteredOverdue = useMemo(() => {
+    if (!overdueInstallments || !searchTerm.trim()) return overdueInstallments?.slice(0, 3) || [];
+    const term = searchTerm.toLowerCase();
+    return overdueInstallments.filter((item) =>
+      item.clientName?.toLowerCase().includes(term)
+    ).slice(0, 5);
+  }, [overdueInstallments, searchTerm]);
+
+  const filteredUpcoming = useMemo(() => {
+    if (!upcomingInstallments || !searchTerm.trim()) return upcomingInstallments?.slice(0, 2) || [];
+    const term = searchTerm.toLowerCase();
+    return upcomingInstallments.filter((item) =>
+      item.clientName?.toLowerCase().includes(term)
+    ).slice(0, 5);
+  }, [upcomingInstallments, searchTerm]);
 
   const isLoading = loadingOverdue || loadingUpcoming || loadingKPIs;
 
@@ -41,11 +57,22 @@ export const CollectionActivitiesPanel = () => {
   return (
     <Card className="h-full flex flex-col glass-card">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-foreground">
-          <AlertCircle className="h-5 w-5 text-primary" />
-          Atividades de Cobrança
-        </CardTitle>
-        <CardDescription>Foco em Ação Imediata</CardDescription>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <AlertCircle className="h-5 w-5 text-primary" />
+              Atividades de Cobrança
+            </CardTitle>
+            <CardDescription>Foco em Ação Imediata</CardDescription>
+          </div>
+          <div className="w-full sm:w-64">
+            <SearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Pesquisar cliente..."
+            />
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-6">
         {/* KPIs Resumidos */}
@@ -70,16 +97,16 @@ export const CollectionActivitiesPanel = () => {
         <div>
           <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
             <AlertCircle className="h-4 w-4 text-destructive" />
-            3 Atividades em Atraso
+            {searchTerm ? `Atividades em Atraso (${filteredOverdue.length})` : "3 Atividades em Atraso"}
           </h4>
           <ScrollArea className="h-[180px]">
-            {topOverdue.length === 0 ? (
+            {filteredOverdue.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhuma parcela em atraso!
+                {searchTerm ? "Nenhum resultado encontrado." : "Nenhuma parcela em atraso!"}
               </p>
             ) : (
               <div className="space-y-2">
-                {topOverdue.map((item, index) => (
+                {filteredOverdue.map((item, index) => (
                   <div
                     key={item.id}
                     className="p-3 bg-destructive/5 border border-destructive/20 rounded-lg animate-slide-in"
@@ -123,16 +150,16 @@ export const CollectionActivitiesPanel = () => {
         <div>
           <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
             <Clock className="h-4 w-4 text-warning" />
-            2 Vencimentos Próximos
+            {searchTerm ? `Vencimentos Próximos (${filteredUpcoming.length})` : "2 Vencimentos Próximos"}
           </h4>
           <ScrollArea className="h-[140px]">
-            {topUpcoming.length === 0 ? (
+            {filteredUpcoming.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhum vencimento próximo.
+                {searchTerm ? "Nenhum resultado encontrado." : "Nenhum vencimento próximo."}
               </p>
             ) : (
               <div className="space-y-2">
-                {topUpcoming.map((item, index) => (
+                {filteredUpcoming.map((item, index) => (
                   <div
                     key={item.id}
                     className="p-3 bg-warning/5 border border-warning/20 rounded-lg animate-slide-in"
