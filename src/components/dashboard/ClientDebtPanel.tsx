@@ -160,65 +160,73 @@ export const ClientDebtPanel = () => {
                   value={`${item.client.id}-${item.contract.id}`}
                   className="border border-border/50 rounded-lg px-4 bg-secondary/30"
                 >
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex flex-col items-start gap-2 text-left flex-1 mr-4">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-foreground">{item.client.name}</span>
-                        {item.overdueCount > 0 && (
-                          <Badge variant="destructive" className="text-xs">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            {item.overdueCount} em atraso
-                          </Badge>
-                        )}
+                  <div className="flex items-center justify-between w-full pr-2">
+                    <AccordionTrigger className="hover:no-underline flex-1 py-4">
+                      <div className="flex flex-col items-start gap-2 text-left flex-1 mr-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-foreground">{item.client.name}</span>
+                          {item.overdueCount > 0 && (
+                            <Badge variant="destructive" className="text-xs">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              {item.overdueCount} em atraso
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-3.5 w-3.5" />
+                            Contrato: {formatCurrency(item.contract.total_value)}
+                          </span>
+                          <span className="font-medium text-foreground">
+                            Saldo: {formatCurrency(item.totalDebt)}
+                          </span>
+                          {item.client.entry_date && (
+                            <span className="flex items-center gap-1 text-primary">
+                              <Calendar className="h-3.5 w-3.5" />
+                              Entrada: {formatDate(item.client.entry_date)}
+                            </span>
+                          )}
+                          {item.client.exit_date && (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              Saída: {formatDate(item.client.exit_date)}
+                            </span>
+                          )}
+                          {item.oldestOverdue && (
+                            <span className="flex items-center gap-1 text-destructive">
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                              Atraso desde: {formatDate(item.oldestOverdue)}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <DollarSign className="h-3.5 w-3.5" />
-                          Contrato: {formatCurrency(item.contract.total_value)}
-                        </span>
-                        <span className="font-medium text-foreground">
-                          Saldo: {formatCurrency(item.totalDebt)}
-                        </span>
-                        {item.client.entry_date && (
-                          <span className="flex items-center gap-1 text-primary">
-                            <Calendar className="h-3.5 w-3.5" />
-                            Entrada: {formatDate(item.client.entry_date)}
-                          </span>
-                        )}
-                        {item.client.exit_date && (
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            Saída: {formatDate(item.client.exit_date)}
-                          </span>
-                        )}
-                        {item.oldestOverdue && (
-                          <span className="flex items-center gap-1 text-destructive">
-                            <AlertTriangle className="h-3.5 w-3.5" />
-                            Atraso desde: {formatDate(item.oldestOverdue)}
-                          </span>
-                        )}
-                      </div>
+                    </AccordionTrigger>
+                    <div className="flex gap-1 ml-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingClient(item.client);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingClient(item.client);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </AccordionTrigger>
+                  </div>
                   <AccordionContent>
                     <div className="pt-2 space-y-4">
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingClient(item.client)}
-                        >
-                          <Pencil className="h-4 w-4 mr-1" />
-                          Editar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setDeletingClient(item.client)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Excluir
-                        </Button>
-                      </div>
                       <h4 className="text-sm font-medium text-muted-foreground">
                         Detalhamento das Parcelas
                       </h4>
