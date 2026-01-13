@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { Plus, ChevronDown, ChevronUp, Trash2, Check, X, Calendar, Edit, CreditC
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateFilters, DateFilterValues } from "./DateFilters";
+import { SearchInput } from "./SearchInput";
 
 const PAYMENT_METHODS = [
   { value: "pix", label: "PIX" },
@@ -52,6 +53,7 @@ export const FixedBillsPanel = () => {
   const [discount, setDiscount] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paidDate, setPaidDate] = useState(new Date().toISOString().split("T")[0]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const toggleExpanded = (billId: string) => {
     setExpandedBills((prev) =>
@@ -183,24 +185,37 @@ export const FixedBillsPanel = () => {
     setPaidDate(new Date().toISOString().split("T")[0]);
   };
 
-  // Filter bills by date
-  const filteredBills = bills?.map((bill) => {
-    const filteredInstallments = bill.installments.filter((installment) => {
-      const dueDate = new Date(installment.due_date);
-      if (dateFilters.year && dueDate.getFullYear() !== dateFilters.year) return false;
-      if (dateFilters.month && dueDate.getMonth() + 1 !== dateFilters.month) return false;
-      if (dateFilters.day && dueDate.getDate() !== dateFilters.day) return false;
-      return true;
-    });
+  // Filter bills by date and search
+  const filteredBills = useMemo(() => {
+    let result = bills?.map((bill) => {
+      const filteredInstallments = bill.installments.filter((installment) => {
+        const dueDate = new Date(installment.due_date);
+        if (dateFilters.year && dueDate.getFullYear() !== dateFilters.year) return false;
+        if (dateFilters.month && dueDate.getMonth() + 1 !== dateFilters.month) return false;
+        if (dateFilters.day && dueDate.getDate() !== dateFilters.day) return false;
+        return true;
+      });
 
-    return {
-      ...bill,
-      installments: filteredInstallments,
-      totalPaid: filteredInstallments.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.value, 0),
-      totalPending: filteredInstallments.filter((i) => i.status !== "paid").reduce((sum, i) => sum + i.value, 0),
-      totalDiscount: filteredInstallments.reduce((sum, i) => sum + (i.discount || 0), 0),
-    };
-  }).filter((bill) => bill.installments.length > 0 || Object.keys(dateFilters).length === 0);
+      return {
+        ...bill,
+        installments: filteredInstallments,
+        totalPaid: filteredInstallments.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.value, 0),
+        totalPending: filteredInstallments.filter((i) => i.status !== "paid").reduce((sum, i) => sum + i.value, 0),
+        totalDiscount: filteredInstallments.reduce((sum, i) => sum + (i.discount || 0), 0),
+      };
+    }).filter((bill) => bill.installments.length > 0 || Object.keys(dateFilters).length === 0);
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result?.filter((bill) =>
+        bill.name.toLowerCase().includes(term) ||
+        bill.description?.toLowerCase().includes(term)
+      );
+    }
+
+    return result;
+  }, [bills, dateFilters, searchTerm]);
 
   // Calculate totals
   const totalStats = {
@@ -253,11 +268,18 @@ export const FixedBillsPanel = () => {
                 <p className="text-sm text-green-400 flex items-center gap-1 mt-1">
                   <Percent className="h-3 w-3" />
                   Economia em descontos: {formatCurrency(totalStats.totalDiscount)}
-                </p>
-              )}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="w-full sm:w-64">
+              <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Pesquisar conta..."
+              />
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <DateFilters filters={dateFilters} onFiltersChange={setDateFilters} />
+            <DateFilters filters={dateFilters} onFiltersChange={setDateFilters} />
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="gap-2">
