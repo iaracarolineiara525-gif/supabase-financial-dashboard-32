@@ -59,15 +59,20 @@ const calculateDaysOverdue = (dueDate: string): number => {
   return Math.max(0, diffDays);
 };
 
-export const useClients = () => {
+export const useClients = (companyId?: string | null) => {
   return useQuery({
-    queryKey: ["clients"],
+    queryKey: ["clients", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("clients")
         .select("*")
         .order("name");
       
+      if (companyId) {
+        query = query.eq("company_id", companyId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as Client[];
     },
@@ -103,13 +108,13 @@ export const useInstallments = () => {
   });
 };
 
-export const useClientsWithDebt = () => {
-  const { data: clients } = useClients();
+export const useClientsWithDebt = (companyId?: string | null) => {
+  const { data: clients } = useClients(companyId);
   const { data: contracts } = useContracts();
   const { data: installments } = useInstallments();
 
   return useQuery({
-    queryKey: ["clientsWithDebt", clients, contracts, installments],
+    queryKey: ["clientsWithDebt", companyId, clients, contracts, installments],
     queryFn: async () => {
       if (!clients || !contracts || !installments) return [];
 
@@ -153,18 +158,24 @@ export const useClientsWithDebt = () => {
   });
 };
 
-export const useOverdueInstallments = () => {
-  const { data: clients } = useClients();
+export const useOverdueInstallments = (companyId?: string | null) => {
+  const { data: clients } = useClients(companyId);
   const { data: contracts } = useContracts();
   const { data: installments } = useInstallments();
 
   return useQuery({
-    queryKey: ["overdueInstallments", clients, contracts, installments],
+    queryKey: ["overdueInstallments", companyId, clients, contracts, installments],
     queryFn: async () => {
       if (!clients || !contracts || !installments) return [];
 
+      // Filter installments based on clients in this company
+      const clientIds = new Set(clients.map(c => c.id));
+      const companyContractIds = new Set(
+        contracts.filter(c => clientIds.has(c.client_id)).map(c => c.id)
+      );
+
       const overdue = installments
-        .filter(i => i.status === "overdue")
+        .filter(i => i.status === "overdue" && companyContractIds.has(i.contract_id))
         .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
 
       return overdue.map(installment => {
@@ -181,22 +192,29 @@ export const useOverdueInstallments = () => {
   });
 };
 
-export const useUpcomingInstallments = () => {
-  const { data: clients } = useClients();
+export const useUpcomingInstallments = (companyId?: string | null) => {
+  const { data: clients } = useClients(companyId);
   const { data: contracts } = useContracts();
   const { data: installments } = useInstallments();
 
   return useQuery({
-    queryKey: ["upcomingInstallments", clients, contracts, installments],
+    queryKey: ["upcomingInstallments", companyId, clients, contracts, installments],
     queryFn: async () => {
       if (!clients || !contracts || !installments) return [];
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      // Filter installments based on clients in this company
+      const clientIds = new Set(clients.map(c => c.id));
+      const companyContractIds = new Set(
+        contracts.filter(c => clientIds.has(c.client_id)).map(c => c.id)
+      );
+
       const upcoming = installments
         .filter(i => {
           if (i.status === "paid") return false;
+          if (!companyContractIds.has(i.contract_id)) return false;
           const dueDate = new Date(i.due_date);
           return dueDate >= today;
         })
@@ -215,13 +233,23 @@ export const useUpcomingInstallments = () => {
   });
 };
 
-export const useStatusSummary = () => {
+export const useStatusSummary = (companyId?: string | null) => {
+  const { data: clients } = useClients(companyId);
+  const { data: contracts } = useContracts();
   const { data: installments } = useInstallments();
 
   return useQuery({
-    queryKey: ["statusSummary", installments],
+    queryKey: ["statusSummary", companyId, clients, contracts, installments],
     queryFn: async () => {
-      if (!installments) return [];
+      if (!clients || !contracts || !installments) return [];
+
+      // Filter installments based on clients in this company
+      const clientIds = new Set(clients.map(c => c.id));
+      const companyContractIds = new Set(
+        contracts.filter(c => clientIds.has(c.client_id)).map(c => c.id)
+      );
+
+      const companyInstallments = installments.filter(i => companyContractIds.has(i.contract_id));
 
       const statusMap: Record<string, StatusSummary> = {
         overdue: { status: "Atrasado", totalValue: 0, count: 0, avgDaysOverdue: 0 },
@@ -232,7 +260,7 @@ export const useStatusSummary = () => {
       let totalOverdueDays = 0;
       let overdueCount = 0;
 
-      for (const installment of installments) {
+      for (const installment of companyInstallments) {
         const status = installment.status;
         statusMap[status].totalValue += Number(installment.value);
         statusMap[status].count += 1;
@@ -249,19 +277,20 @@ export const useStatusSummary = () => {
 
       return Object.values(statusMap);
     },
-    enabled: !!installments,
+    enabled: !!clients && !!contracts && !!installments,
   });
 };
 
-export const useDashboardKPIs = () => {
-  const { data: clients } = useClients();
+export const useDashboardKPIs = (companyId?: string | null) => {
+  const { data: clients } = useClients(companyId);
+  const { data: contracts } = useContracts();
   const { data: installments } = useInstallments();
-  const { data: overdueInstallments } = useOverdueInstallments();
+  const { data: overdueInstallments } = useOverdueInstallments(companyId);
 
   return useQuery({
-    queryKey: ["dashboardKPIs", clients, installments, overdueInstallments],
+    queryKey: ["dashboardKPIs", companyId, clients, contracts, installments, overdueInstallments],
     queryFn: async () => {
-      if (!clients || !installments) {
+      if (!clients || !contracts || !installments) {
         return {
           totalClients: 0,
           totalOverdueValue: 0,
@@ -270,19 +299,27 @@ export const useDashboardKPIs = () => {
         };
       }
 
-      const overdueValue = installments
+      // Filter installments based on clients in this company
+      const clientIds = new Set(clients.map(c => c.id));
+      const companyContractIds = new Set(
+        contracts.filter(c => clientIds.has(c.client_id)).map(c => c.id)
+      );
+
+      const companyInstallments = installments.filter(i => companyContractIds.has(i.contract_id));
+
+      const overdueValue = companyInstallments
         .filter(i => i.status === "overdue")
         .reduce((sum, i) => sum + Number(i.value), 0);
 
-      const openValue = installments
+      const openValue = companyInstallments
         .filter(i => i.status !== "paid")
         .reduce((sum, i) => sum + Number(i.value), 0);
 
       const clientsWithOverdue = new Set(
         overdueInstallments?.map(i => {
-          const contract = installments.find(inst => inst.contract_id === i.contract_id);
-          return contract?.contract_id;
-        })
+          const contract = contracts.find(c => c.id === i.contract_id);
+          return contract?.client_id;
+        }).filter(Boolean)
       ).size;
 
       return {
@@ -292,6 +329,6 @@ export const useDashboardKPIs = () => {
         totalOpenValue: openValue,
       };
     },
-    enabled: !!clients && !!installments,
+    enabled: !!clients && !!contracts && !!installments,
   });
 };

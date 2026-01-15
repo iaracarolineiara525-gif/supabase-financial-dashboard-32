@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useClientsWithDebt } from "@/hooks/useFinancialData";
+import { useCompanyContext } from "@/contexts/CompanyContext";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { User, Calendar, AlertTriangle, DollarSign, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,7 +38,8 @@ const statusLabel = (status: string) => {
 };
 
 export const ClientDebtPanel = () => {
-  const { data: clientsWithDebt, isLoading } = useClientsWithDebt();
+  const { selectedCompanyId } = useCompanyContext();
+  const { data: clientsWithDebt, isLoading } = useClientsWithDebt(selectedCompanyId);
   const queryClient = useQueryClient();
   const [editingClient, setEditingClient] = useState<any>(null);
   const [deletingClient, setDeletingClient] = useState<any>(null);

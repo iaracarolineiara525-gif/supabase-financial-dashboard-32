@@ -5,15 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useOverdueInstallments, useUpcomingInstallments, useDashboardKPIs } from "@/hooks/useFinancialData";
+import { useCompanyContext } from "@/contexts/CompanyContext";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Phone, Mail, AlertCircle, Clock, Users, DollarSign } from "lucide-react";
 import { KPICard } from "./KPICard";
 import { SearchInput } from "./SearchInput";
 
 export const CollectionActivitiesPanel = () => {
-  const { data: overdueInstallments, isLoading: loadingOverdue } = useOverdueInstallments();
-  const { data: upcomingInstallments, isLoading: loadingUpcoming } = useUpcomingInstallments();
-  const { data: kpis, isLoading: loadingKPIs } = useDashboardKPIs();
+  const { selectedCompanyId } = useCompanyContext();
+  const { data: overdueInstallments, isLoading: loadingOverdue } = useOverdueInstallments(selectedCompanyId);
+  const { data: upcomingInstallments, isLoading: loadingUpcoming } = useUpcomingInstallments(selectedCompanyId);
+  const { data: kpis, isLoading: loadingKPIs } = useDashboardKPIs(selectedCompanyId);
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredOverdue = useMemo(() => {

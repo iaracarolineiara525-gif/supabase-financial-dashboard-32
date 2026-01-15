@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useStatusSummary } from "@/hooks/useFinancialData";
+import { useCompanyContext } from "@/contexts/CompanyContext";
 import { formatCurrency } from "@/lib/formatters";
 import { BarChart3, TrendingUp, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
@@ -25,7 +26,8 @@ const statusConfig = {
 };
 
 export const StatusValueCrossView = () => {
-  const { data: statusSummary, isLoading } = useStatusSummary();
+  const { selectedCompanyId } = useCompanyContext();
+  const { data: statusSummary, isLoading } = useStatusSummary(selectedCompanyId);
 
   if (isLoading) {
     return (
