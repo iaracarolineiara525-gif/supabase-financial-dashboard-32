@@ -13,9 +13,11 @@ import { ClientRegistrationDialog } from "@/components/dashboard/ClientRegistrat
 import { ExportDialog } from "@/components/dashboard/ExportDialog";
 import { GPNLogo } from "@/components/GPNLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { CompanyTabs } from "@/components/dashboard/CompanyTabs";
 import { useDashboardKPIs, useInstallments } from "@/hooks/useFinancialData";
 import { useEmployees, useEmployeePayments, useCommissions } from "@/hooks/useEmployeeData";
 import { useFixedBillsWithInstallments } from "@/hooks/useFixedBillsData";
+import { useCompanyContext } from "@/contexts/CompanyContext";
 import { formatCurrency } from "@/lib/formatters";
 import { Users, AlertCircle, BarChart3, DollarSign, TrendingUp, Calendar, RefreshCw, Wallet, Percent, Menu, CheckCircle, Clock, LogOut, Receipt } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -39,12 +41,13 @@ const Index = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [activePanel, setActivePanel] = useState("clientes");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { data: kpis } = useDashboardKPIs();
+  const { selectedCompanyId, selectedCompany } = useCompanyContext();
+  const { data: kpis } = useDashboardKPIs(selectedCompanyId);
   const { data: installments } = useInstallments();
-  const { data: employees } = useEmployees();
+  const { data: employees } = useEmployees(selectedCompanyId);
   const { data: employeePayments } = useEmployeePayments();
   const { data: commissions } = useCommissions();
-  const { data: fixedBills } = useFixedBillsWithInstallments();
+  const { data: fixedBills } = useFixedBillsWithInstallments(selectedCompanyId);
   const queryClient = useQueryClient();
   const { theme } = useTheme();
   const { user, signOut } = useAuth();
@@ -259,13 +262,18 @@ const Index = () => {
         {/* Header */}
         <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b border-border/50">
           <div className="px-6 py-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">GPN Digital</h1>
-                <p className="text-xs text-muted-foreground">Sistema de Gestão Financeira</p>
-              </div>
-              
-              <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-lg font-semibold text-foreground">
+                    {selectedCompany?.name || "GPN Digital"}
+                  </h1>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedCompany ? `CNPJ: ${selectedCompany.cnpj}` : "Sistema de Gestão Financeira"}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-3 flex-wrap">
                 <ExportDialog />
                 <ClientRegistrationDialog onClientCreated={handleRefresh} />
                 
@@ -297,6 +305,12 @@ const Index = () => {
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
+              </div>
+              </div>
+              
+              {/* Company Tabs */}
+              <div className="flex items-center">
+                <CompanyTabs />
               </div>
             </div>
           </div>

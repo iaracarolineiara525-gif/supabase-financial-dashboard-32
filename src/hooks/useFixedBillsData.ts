@@ -36,14 +36,20 @@ export interface FixedBillWithInstallments extends FixedBill {
   nextDueDate: string | null;
 }
 
-export const useFixedBills = () => {
+export const useFixedBills = (companyId?: string | null) => {
   return useQuery({
-    queryKey: ["fixed_bills"],
+    queryKey: ["fixed_bills", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("fixed_bills" as any)
         .select("*")
         .order("name");
+      
+      if (companyId) {
+        query = query.eq("company_id", companyId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as unknown as FixedBill[];
     },
@@ -64,8 +70,8 @@ export const useFixedBillInstallments = () => {
   });
 };
 
-export const useFixedBillsWithInstallments = () => {
-  const { data: bills, isLoading: billsLoading } = useFixedBills();
+export const useFixedBillsWithInstallments = (companyId?: string | null) => {
+  const { data: bills, isLoading: billsLoading } = useFixedBills(companyId);
   const { data: installments, isLoading: installmentsLoading } = useFixedBillInstallments();
 
   const billsWithInstallments: FixedBillWithInstallments[] = bills?.map((bill) => {

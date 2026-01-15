@@ -40,14 +40,20 @@ export interface Commission {
   employee?: Employee;
 }
 
-export const useEmployees = () => {
+export const useEmployees = (companyId?: string | null) => {
   return useQuery({
-    queryKey: ["employees"],
+    queryKey: ["employees", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("employees")
         .select("*")
         .order("name");
+      
+      if (companyId) {
+        query = query.eq("company_id", companyId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as Employee[];
     },

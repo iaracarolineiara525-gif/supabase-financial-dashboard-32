@@ -1,11 +1,26 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useInstallments } from "@/hooks/useFinancialData";
+import { useClients, useContracts, useInstallments } from "@/hooks/useFinancialData";
+import { useCompanyContext } from "@/contexts/CompanyContext";
 import { formatCurrency } from "@/lib/formatters";
 import { TrendingUp, DollarSign, Clock, CheckCircle } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { useMemo } from "react";
 
 export const RevenuePanel = () => {
+  const { selectedCompanyId } = useCompanyContext();
+  const { data: clients } = useClients(selectedCompanyId);
+  const { data: contracts } = useContracts();
   const { data: installments, isLoading } = useInstallments();
+
+  // Filter installments by company
+  const companyInstallments = useMemo(() => {
+    if (!clients || !contracts || !installments) return [];
+    const clientIds = new Set(clients.map(c => c.id));
+    const companyContractIds = new Set(
+      contracts.filter(c => clientIds.has(c.client_id)).map(c => c.id)
+    );
+    return installments.filter(i => companyContractIds.has(i.contract_id));
+  }, [clients, contracts, installments]);
 
   if (isLoading) {
     return (
@@ -25,9 +40,9 @@ export const RevenuePanel = () => {
     );
   }
 
-  const paidInstallments = installments?.filter(i => i.status === "paid") || [];
-  const openInstallments = installments?.filter(i => i.status === "open") || [];
-  const overdueInstallments = installments?.filter(i => i.status === "overdue") || [];
+  const paidInstallments = companyInstallments.filter(i => i.status === "paid");
+  const openInstallments = companyInstallments.filter(i => i.status === "open");
+  const overdueInstallments = companyInstallments.filter(i => i.status === "overdue");
 
   const totalReceived = paidInstallments.reduce((sum, i) => sum + Number(i.value), 0);
   const totalOpen = openInstallments.reduce((sum, i) => sum + Number(i.value), 0);
