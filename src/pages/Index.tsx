@@ -1,355 +1,272 @@
-import { useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ClientDebtPanel } from "@/components/dashboard/ClientDebtPanel";
-import { CollectionActivitiesPanel } from "@/components/dashboard/CollectionActivitiesPanel";
-import { StatusValueCrossView } from "@/components/dashboard/StatusValueCrossView";
-import { RevenuePanel } from "@/components/dashboard/RevenuePanel";
-import { EmployeePaymentsPanel } from "@/components/dashboard/EmployeePaymentsPanel";
-import { CommissionsPanel } from "@/components/dashboard/CommissionsPanel";
-import { FixedBillsPanel } from "@/components/dashboard/FixedBillsPanel";
-import { KPICard } from "@/components/dashboard/KPICard";
-import { ClientRegistrationDialog } from "@/components/dashboard/ClientRegistrationDialog";
-import { ExportDialog } from "@/components/dashboard/ExportDialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { GPNLogo } from "@/components/GPNLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { CompanyTabs } from "@/components/dashboard/CompanyTabs";
-import { useDashboardKPIs, useInstallments } from "@/hooks/useFinancialData";
-import { useEmployees, useEmployeePayments, useCommissions } from "@/hooks/useEmployeeData";
-import { useFixedBillsWithInstallments } from "@/hooks/useFixedBillsData";
-import { useCompanyContext } from "@/contexts/CompanyContext";
-import { formatCurrency } from "@/lib/formatters";
-import { Users, AlertCircle, BarChart3, DollarSign, TrendingUp, Calendar, RefreshCw, Wallet, Percent, Menu, CheckCircle, Clock, LogOut, Receipt } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import logoMeta from "@/assets/logo-meta-distribuidora.png";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  BarChart3,
+  Bell,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  CircleDashed,
+  Clock3,
+  Code2,
+  Copy,
+  FileSpreadsheet,
+  FileText,
+  Filter,
+  Gauge,
+  History,
+  LayoutDashboard,
+  ListFilter,
+  LockKeyhole,
+  LogOut,
+  Mail,
+  Menu,
+  MessageCircle,
+  MoreHorizontal,
+  Pause,
+  Play,
+  Plus,
+  RefreshCw,
+  Search,
+  Send,
+  Settings2,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+  Tag,
+  TerminalSquare,
+  Upload,
+  Users,
+  UserRoundPlus,
+  XCircle,
+} from "lucide-react";
 
-const menuItems = [
-  { id: "clientes", label: "Clientes", icon: Users },
-  { id: "cobrancas", label: "Cobranças", icon: AlertCircle },
-  { id: "analise", label: "Análise", icon: BarChart3 },
-  { id: "receita", label: "Receita", icon: TrendingUp },
-  { id: "funcionarios", label: "Funcionários", icon: Wallet },
-  { id: "comissoes", label: "Comissões", icon: Percent },
-  { id: "contasfixas", label: "Contas - Diversas", icon: Receipt },
+type Section = "overview" | "api" | "campaigns" | "contacts";
+
+type Contact = {
+  id: string;
+  name: string;
+  phone: string;
+  group: string;
+  consent: "Consentido" | "Pendente" | "Descadastrado";
+  lastSend: string;
+};
+
+const navItems: Array<{ id: Section; label: string; description: string; icon: typeof LayoutDashboard }> = [
+  { id: "overview", label: "Visão geral", description: "Comando central", icon: LayoutDashboard },
+  { id: "api", label: "Mensagem via API", description: "Conexão e segurança", icon: Code2 },
+  { id: "campaigns", label: "Disparo", description: "Campanhas e fila", icon: Send },
+  { id: "contacts", label: "Lista com nomes", description: "Contatos e grupos", icon: Users },
 ];
 
-const Index = () => {
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [activePanel, setActivePanel] = useState("clientes");
+const contacts: Contact[] = [
+  { id: "1", name: "Ana Carolina Mendes", phone: "+55 11 99824-1180", group: "Clientes ativos", consent: "Consentido", lastSend: "Hoje, 09:42" },
+  { id: "2", name: "Bruno Henrique Silva", phone: "+55 11 99140-2271", group: "Clientes ativos", consent: "Consentido", lastSend: "Ontem, 17:18" },
+  { id: "3", name: "Camila Oliveira Costa", phone: "+55 21 98770-0912", group: "Novos leads", consent: "Consentido", lastSend: "Nunca" },
+  { id: "4", name: "Daniel Souza Ribeiro", phone: "+55 31 98854-6620", group: "Clientes ativos", consent: "Pendente", lastSend: "—" },
+  { id: "5", name: "Eduarda Martins", phone: "+55 41 99903-4418", group: "Pós-venda", consent: "Consentido", lastSend: "12 ago, 14:06" },
+  { id: "6", name: "Fernanda Azevedo", phone: "+55 51 99122-8045", group: "Supressão", consent: "Descadastrado", lastSend: "—" },
+];
+
+const campaigns = [
+  { name: "Reativação — clientes sem compra", status: "Em execução", delivered: "68%", audience: "148 contatos", time: "Iniciada há 14 min" },
+  { name: "Lembrete de pagamento", status: "Agendada", delivered: "—", audience: "42 contatos", time: "Hoje, 18:30" },
+  { name: "Boas-vindas novos clientes", status: "Concluída", delivered: "96%", audience: "86 contatos", time: "Ontem, 11:20" },
+];
+
+const sectionCopy: Record<Section, { eyebrow: string; title: string; description: string }> = {
+  overview: {
+    eyebrow: "CENTRO DE COMANDO",
+    title: "Mensagens que chegam no momento certo.",
+    description: "Organize sua operação, controle seus contatos e acompanhe cada envio com clareza.",
+  },
+  api: {
+    eyebrow: "INFRAESTRUTURA DE ENVIO",
+    title: "Mensagem via API",
+    description: "Conecte o provedor oficial, valide a segurança e deixe o canal pronto para operar.",
+  },
+  campaigns: {
+    eyebrow: "OPERAÇÃO CONTROLADA",
+    title: "Disparo",
+    description: "Crie campanhas, revise a mensagem e simule tudo antes de qualquer envio real.",
+  },
+  contacts: {
+    eyebrow: "BASE DE RELACIONAMENTO",
+    title: "Lista com nomes",
+    description: "Uma base organizada, consentida e pronta para segmentar com responsabilidade.",
+  },
+};
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    "Em execução": "border-primary/30 bg-primary/10 text-primary",
+    Agendada: "border-border bg-secondary text-foreground",
+    Concluída: "border-white/15 bg-white/10 text-white dark:bg-white/10",
+    Consentido: "border-primary/25 bg-primary/10 text-primary",
+    Pendente: "border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-300",
+    Descadastrado: "border-destructive/25 bg-destructive/10 text-destructive",
+  };
+
+  return <Badge variant="outline" className={cn("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]", styles[status] || "border-border bg-secondary")}>{status}</Badge>;
+}
+
+function MetricCard({ label, value, detail, icon: Icon, tone = "neutral" }: { label: string; value: string; detail: string; icon: typeof Users; tone?: "red" | "neutral" | "white" }) {
+  return (
+    <Card className="glass-card rounded-2xl transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+            <p className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-foreground">{value}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+          </div>
+          <div className={cn("rounded-xl p-3", tone === "red" ? "bg-primary/15 text-primary" : tone === "white" ? "bg-foreground text-background" : "bg-secondary text-foreground")}>
+            <Icon className="h-4 w-4" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function Index() {
+  const [activeSection, setActiveSection] = useState<Section>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { selectedCompanyId, selectedCompany } = useCompanyContext();
-  const { data: kpis } = useDashboardKPIs(selectedCompanyId);
-  const { data: installments } = useInstallments();
-  const { data: employees } = useEmployees(selectedCompanyId);
-  const { data: employeePayments } = useEmployeePayments();
-  const { data: commissions } = useCommissions();
-  const { data: fixedBills } = useFixedBillsWithInstallments(selectedCompanyId);
-  const queryClient = useQueryClient();
+  const [apiMode, setApiMode] = useState("Sandbox");
+  const [apiProvider, setApiProvider] = useState("WhatsApp Business Platform");
+  const [message, setMessage] = useState("Olá {{nome}}, tudo bem? Temos uma novidade especial para você. Acesse {{link}} para conferir.");
+  const [campaignName, setCampaignName] = useState("Novidade para clientes ativos");
+  const [search, setSearch] = useState("");
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+  const [dryRun, setDryRun] = useState(true);
   const { theme } = useTheme();
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleRefresh = () => {
-    queryClient.invalidateQueries();
+  const copy = sectionCopy[activeSection];
+  const filteredContacts = useMemo(() => contacts.filter((contact) => `${contact.name} ${contact.phone} ${contact.group}`.toLowerCase().includes(search.toLowerCase())), [search]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
   };
 
-  const handleLogout = async () => {
-    const { error } = await signOut();
-    if (error) {
-      toast({
-        title: 'Erro ao sair',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      navigate('/auth');
-    }
+  const showDemoToast = (title: string, description: string) => toast({ title, description });
+
+  const handleTestConnection = () => {
+    showDemoToast("Conexão simulada com sucesso", `O ambiente ${apiMode.toLowerCase()} está pronto para receber as credenciais seguras.`);
   };
 
-  // Calculate KPIs for each section
-  const employeeKPIs = {
-    totalEmployees: employees?.filter(e => e.active)?.length || 0,
-    totalSalaries: employees?.reduce((sum, e) => sum + (e.salary || 0), 0) || 0,
-    totalPayments: employeePayments?.reduce((sum, p) => sum + p.amount, 0) || 0,
-    paymentsThisMonth: employeePayments?.filter(p => {
-      const paymentDate = new Date(p.payment_date);
-      const now = new Date();
-      return paymentDate.getMonth() === now.getMonth() && paymentDate.getFullYear() === now.getFullYear();
-    })?.reduce((sum, p) => sum + p.amount, 0) || 0,
+  const handleDryRun = () => {
+    showDemoToast("Dry run concluído", "Nenhuma mensagem foi enviada. 42 contatos elegíveis passaram pelas validações.");
   };
 
-  const commissionKPIs = {
-    totalCommissions: commissions?.length || 0,
-    pendingCommissions: commissions?.filter(c => c.status === 'pending')?.length || 0,
-    paidCommissions: commissions?.filter(c => c.status === 'paid')?.length || 0,
-    totalValue: commissions?.reduce((sum, c) => sum + c.amount, 0) || 0,
-    pendingValue: commissions?.filter(c => c.status === 'pending')?.reduce((sum, c) => sum + c.amount, 0) || 0,
+  const toggleContact = (id: string) => {
+    setSelectedContacts((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   };
 
-  const fixedBillKPIs = {
-    totalBills: fixedBills?.length || 0,
-    totalPending: fixedBills?.reduce((sum, b) => sum + b.totalPending, 0) || 0,
-    totalPaid: fixedBills?.reduce((sum, b) => sum + b.totalPaid, 0) || 0,
-    overdueCount: fixedBills?.reduce((sum, b) => {
-      return sum + b.installments.filter(i => i.status !== 'paid' && new Date(i.due_date) < new Date()).length;
-    }, 0) || 0,
-  };
-
-  const revenueKPIs = {
-    totalPaid: installments?.filter(i => i.status === 'paid')?.reduce((sum, i) => sum + i.value, 0) || 0,
-    totalReceivable: installments?.reduce((sum, i) => sum + i.value, 0) || 0,
-  };
-
-  const renderKPIs = () => {
-    switch (activePanel) {
-      case "clientes":
-        return (
-          <>
-            <KPICard title="Total de Clientes" value={kpis?.totalClients || 0} subtitle="Clientes cadastrados" icon={Users} variant="info" />
-            <KPICard title="Valor em Aberto" value={formatCurrency(kpis?.totalOpenValue || 0)} subtitle="Total a receber" icon={DollarSign} variant="default" />
-            <KPICard title="Valor em Atraso" value={formatCurrency(kpis?.totalOverdueValue || 0)} subtitle="Requer ação imediata" icon={AlertCircle} variant="destructive" />
-            <KPICard title="Clientes com Atraso" value={kpis?.clientsWithOverdue || 0} subtitle="Precisam de cobrança" icon={TrendingUp} variant="warning" />
-          </>
-        );
-      case "cobrancas":
-        return (
-          <>
-            <KPICard title="Total em Aberto" value={formatCurrency(kpis?.totalOpenValue || 0)} subtitle="Aguardando pagamento" icon={Clock} variant="info" />
-            <KPICard title="Valor em Atraso" value={formatCurrency(kpis?.totalOverdueValue || 0)} subtitle="Requer ação imediata" icon={AlertCircle} variant="destructive" />
-            <KPICard title="Clientes com Atraso" value={kpis?.clientsWithOverdue || 0} subtitle="Precisam de cobrança" icon={Users} variant="warning" />
-            <KPICard title="Parcelas Pagas" value={formatCurrency(revenueKPIs.totalPaid)} subtitle="Recebido" icon={CheckCircle} variant="default" />
-          </>
-        );
-      case "analise":
-        return (
-          <>
-            <KPICard title="Total de Clientes" value={kpis?.totalClients || 0} subtitle="Clientes cadastrados" icon={Users} variant="info" />
-            <KPICard title="Total Receita" value={formatCurrency(revenueKPIs.totalReceivable)} subtitle="Valor total" icon={DollarSign} variant="default" />
-            <KPICard title="Recebido" value={formatCurrency(revenueKPIs.totalPaid)} subtitle="Já pago" icon={CheckCircle} variant="info" />
-            <KPICard title="Em Aberto" value={formatCurrency(kpis?.totalOpenValue || 0)} subtitle="A receber" icon={Clock} variant="warning" />
-          </>
-        );
-      case "receita":
-        return (
-          <>
-            <KPICard title="Receita Total" value={formatCurrency(revenueKPIs.totalReceivable)} subtitle="Valor total de contratos" icon={DollarSign} variant="info" />
-            <KPICard title="Recebido" value={formatCurrency(revenueKPIs.totalPaid)} subtitle="Parcelas pagas" icon={CheckCircle} variant="default" />
-            <KPICard title="A Receber" value={formatCurrency(kpis?.totalOpenValue || 0)} subtitle="Parcelas em aberto" icon={Clock} variant="warning" />
-            <KPICard title="Em Atraso" value={formatCurrency(kpis?.totalOverdueValue || 0)} subtitle="Parcelas atrasadas" icon={AlertCircle} variant="destructive" />
-          </>
-        );
-      case "funcionarios":
-        return (
-          <>
-            <KPICard title="Total Funcionários" value={employeeKPIs.totalEmployees} subtitle="Funcionários ativos" icon={Users} variant="info" />
-            <KPICard title="Folha Salarial" value={formatCurrency(employeeKPIs.totalSalaries)} subtitle="Total de salários" icon={Wallet} variant="default" />
-            <KPICard title="Total Pagamentos" value={formatCurrency(employeeKPIs.totalPayments)} subtitle="Pagamentos realizados" icon={DollarSign} variant="info" />
-            <KPICard title="Pagamentos Mês" value={formatCurrency(employeeKPIs.paymentsThisMonth)} subtitle="Pagamentos este mês" icon={Calendar} variant="warning" />
-          </>
-        );
-      case "comissoes":
-        return (
-          <>
-            <KPICard title="Total Comissões" value={commissionKPIs.totalCommissions} subtitle="Comissões registradas" icon={Percent} variant="info" />
-            <KPICard title="Valor Total" value={formatCurrency(commissionKPIs.totalValue)} subtitle="Soma das comissões" icon={DollarSign} variant="default" />
-            <KPICard title="Pendentes" value={commissionKPIs.pendingCommissions} subtitle={formatCurrency(commissionKPIs.pendingValue)} icon={Clock} variant="warning" />
-            <KPICard title="Pagas" value={commissionKPIs.paidCommissions} subtitle="Comissões pagas" icon={CheckCircle} variant="info" />
-          </>
-        );
-      case "contasfixas":
-        return (
-          <>
-            <KPICard title="Total de Contas" value={fixedBillKPIs.totalBills} subtitle="Contas fixas cadastradas" icon={Receipt} variant="info" />
-            <KPICard title="Valor Pendente" value={formatCurrency(fixedBillKPIs.totalPending)} subtitle="A pagar" icon={Clock} variant="warning" />
-            <KPICard title="Valor Pago" value={formatCurrency(fixedBillKPIs.totalPaid)} subtitle="Já pago" icon={CheckCircle} variant="default" />
-            <KPICard title="Parcelas Atrasadas" value={fixedBillKPIs.overdueCount} subtitle="Requer atenção" icon={AlertCircle} variant="destructive" />
-          </>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const renderPanel = () => {
-    switch (activePanel) {
-      case "clientes":
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ClientDebtPanel />
-            <CollectionActivitiesPanel />
-          </div>
-        );
-      case "cobrancas":
-        return <CollectionActivitiesPanel />;
-      case "analise":
-        return <StatusValueCrossView />;
-      case "receita":
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RevenuePanel />
-            <StatusValueCrossView />
-          </div>
-        );
-      case "funcionarios":
-        return <EmployeePaymentsPanel />;
-      case "comissoes":
-        return <CommissionsPanel />;
-      case "contasfixas":
-        return <FixedBillsPanel />;
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className={`relative min-h-screen flex overflow-hidden ${theme === "dark" ? "gpn-gradient-radial" : "gpn-gradient-radial-light"} gpn-grid`}>
-      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_70%_0%,hsl(var(--primary)/0.08),transparent_32%)]" aria-hidden="true" />
-      {/* Sidebar */}
-      <aside className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-card/95 backdrop-blur-md border-r border-border/70 transition-all duration-300 shadow-2xl shadow-black/10",
-        sidebarOpen ? "w-64" : "w-16"
-      )}>
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="p-4 border-b border-border/50">
-            <div className="flex justify-center">
-              <GPNLogo className="h-10 w-auto" />
+  const renderOverview = () => (
+    <div className="space-y-6">
+      <section className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+        <Card className="relative overflow-hidden rounded-[1.7rem] border-primary/20 bg-black text-white shadow-2xl shadow-black/20">
+          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/25 blur-3xl" aria-hidden="true" />
+          <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.7)_1px,transparent_1px)] [background-size:32px_32px]" aria-hidden="true" />
+          <CardContent className="relative p-7 sm:p-9">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-red-200"><Sparkles className="h-3.5 w-3.5 text-primary" /> Operação em foco</div>
+            <h2 className="mt-7 max-w-2xl text-3xl font-semibold leading-[1.02] tracking-[-0.055em] sm:text-5xl">Cada contato merece uma mensagem <span className="text-primary">bem direcionada.</span></h2>
+            <p className="mt-5 max-w-xl text-sm leading-6 text-white/60">Crie campanhas com revisão humana, respeite o consentimento e acompanhe a entrega de ponta a ponta.</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button onClick={() => setActiveSection("campaigns")} className="rounded-xl bg-white px-5 text-black hover:bg-white/90"><Plus className="mr-2 h-4 w-4" /> Criar disparo</Button>
+              <Button onClick={() => setActiveSection("api")} variant="outline" className="rounded-xl border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"><Settings2 className="mr-2 h-4 w-4" /> Configurar API</Button>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-3 space-y-1">
-            {menuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActivePanel(item.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  activePanel === item.id
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                )}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {sidebarOpen && <span>{item.label}</span>}
-              </button>
-            ))}
-          </nav>
+        <Card className="glass-card rounded-[1.7rem]">
+          <CardHeader className="flex-row items-start justify-between space-y-0 p-7 pb-4">
+            <div><CardDescription className="text-[10px] font-semibold uppercase tracking-[0.18em]">Canal principal</CardDescription><CardTitle className="mt-2 text-xl tracking-[-0.04em]">WhatsApp Business</CardTitle></div>
+            <div className="rounded-xl bg-primary/15 p-3 text-primary"><MessageCircle className="h-5 w-5" /></div>
+          </CardHeader>
+          <CardContent className="space-y-5 p-7 pt-2">
+            <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3"><span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-50" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" /></span><span className="text-sm font-medium">Sandbox conectado</span><span className="ml-auto text-xs text-muted-foreground">Teste</span></div>
+            <div className="space-y-3 text-sm"><div className="flex justify-between gap-4"><span className="text-muted-foreground">Provedor</span><span className="font-medium text-foreground">Meta Cloud API</span></div><div className="flex justify-between gap-4"><span className="text-muted-foreground">Limite atual</span><span className="font-medium text-foreground">80 mensagens/min</span></div><div className="flex justify-between gap-4"><span className="text-muted-foreground">Última verificação</span><span className="font-medium text-foreground">Há 4 min</span></div></div>
+            <Button variant="ghost" className="w-full justify-between rounded-xl px-3 text-sm text-primary hover:bg-primary/10" onClick={() => setActiveSection("api")}>Ver detalhes da conexão <ArrowRight className="h-4 w-4" /></Button>
+          </CardContent>
+        </Card>
+      </section>
 
-          {/* Toggle */}
-          <div className="p-3 border-t border-border/50">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="w-full justify-center"
-            >
-              <Menu className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </aside>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Contatos elegíveis" value="1.284" detail="+12,4% neste mês" icon={Users} tone="red" />
+        <MetricCard label="Mensagens enviadas" value="3.842" detail="96,2% aceitas pela API" icon={Send} tone="neutral" />
+        <MetricCard label="Entregues" value="3.588" detail="93,4% do volume enviado" icon={CheckCircle2} tone="white" />
+        <MetricCard label="Em fila" value="42" detail="Próximo processamento em 2 min" icon={Clock3} tone="red" />
+      </section>
 
-      {/* Main Content */}
-      <div className={cn(
-        "flex-1 transition-all duration-300",
-        sidebarOpen ? "ml-64" : "ml-16"
-      )}>
-        {/* Header */}
-        <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b border-border/70 shadow-sm">
-          <div className="px-6 py-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-lg font-semibold text-foreground">
-                    {selectedCompany?.name || "GPN Digital"}
-                  </h1>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedCompany ? `CNPJ: ${selectedCompany.cnpj}` : "Sistema de Gestão Financeira"}
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-3 flex-wrap">
-                <ExportDialog />
-                <ClientRegistrationDialog onClientCreated={handleRefresh} />
-                
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[160px] bg-secondary/50 border-border/50 hover:bg-secondary transition-colors">
-                    <Calendar className="h-4 w-4 mr-2 text-primary" />
-                    <SelectValue placeholder="Filtrar status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os Status</SelectItem>
-                    <SelectItem value="overdue">Atrasados</SelectItem>
-                    <SelectItem value="open">Em Aberto</SelectItem>
-                    <SelectItem value="paid">Pagos</SelectItem>
-                  </SelectContent>
-                </Select>
+      <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+        <Card className="glass-card rounded-[1.7rem]">
+          <CardHeader className="flex-row items-end justify-between space-y-0 p-7 pb-4"><div><CardDescription className="text-[10px] font-semibold uppercase tracking-[0.18em]">Acompanhamento</CardDescription><CardTitle className="mt-2 text-xl tracking-[-0.04em]">Campanhas recentes</CardTitle></div><Button variant="ghost" size="sm" className="text-primary" onClick={() => setActiveSection("campaigns")}>Ver todas <ArrowRight className="ml-2 h-3.5 w-3.5" /></Button></CardHeader>
+          <CardContent className="space-y-2 p-7 pt-2">{campaigns.map((campaign) => <div key={campaign.name} className="group flex flex-col gap-3 rounded-2xl border border-border/60 p-4 transition-colors hover:border-primary/30 sm:flex-row sm:items-center"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-foreground"><Send className="h-4 w-4" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-semibold">{campaign.name}</p><StatusBadge status={campaign.status} /></div><p className="mt-1 text-xs text-muted-foreground">{campaign.audience} · {campaign.time}</p></div><div className="text-left sm:text-right"><p className="text-sm font-semibold">{campaign.delivered}</p><p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">entregues</p></div><MoreHorizontal className="hidden h-4 w-4 text-muted-foreground sm:block" /></div>)}</CardContent>
+        </Card>
 
-                <Button variant="outline" size="icon" onClick={handleRefresh} className="border-border/50 hover:bg-secondary hover:border-primary/50 transition-all">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-
-                <ThemeToggle />
-
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={handleLogout}
-                  className="border-border/50 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all"
-                  title="Sair"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
-              </div>
-              
-              {/* Company Tabs */}
-              <div className="flex items-center">
-                <CompanyTabs />
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Content */}
-        <main className="p-6 space-y-6">
-          {/* KPI Cards - Dynamic based on active panel */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {renderKPIs()}
-          </div>
-
-          {/* Active Panel */}
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 border-l-2 border-primary pl-3">
-              {menuItems.find(m => m.id === activePanel)?.icon && (
-                <span className="text-primary">
-                  {(() => {
-                    const Icon = menuItems.find(m => m.id === activePanel)?.icon;
-                    return Icon ? <Icon className="h-5 w-5" /> : null;
-                  })()}
-                </span>
-              )}
-              {menuItems.find(m => m.id === activePanel)?.label}
-            </h2>
-            {renderPanel()}
-          </section>
-        </main>
-
-        {/* Footer */}
-        <footer className="border-t border-border/50 py-4 bg-card/30 backdrop-blur-sm">
-          <div className="px-6 text-center text-sm text-muted-foreground">
-            Dashboard de Gestão Financeira • Dados atualizados em tempo real
-          </div>
-        </footer>
-      </div>
+        <Card className="glass-card rounded-[1.7rem]">
+          <CardHeader className="p-7 pb-4"><CardDescription className="text-[10px] font-semibold uppercase tracking-[0.18em]">Saúde da operação</CardDescription><CardTitle className="mt-2 text-xl tracking-[-0.04em]">Pronto para o próximo envio</CardTitle></CardHeader>
+          <CardContent className="space-y-5 p-7 pt-2"><div className="flex items-center gap-4"><div className="relative flex h-20 w-20 items-center justify-center rounded-full border-[7px] border-primary/20 border-t-primary"><span className="text-lg font-semibold">98%</span></div><div><p className="font-semibold">Índice operacional</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Acompanhe qualidade, consentimento e estabilidade do canal.</p></div></div><div className="space-y-3">{[{ label: "API e credenciais", value: "Verificado", icon: ShieldCheck }, { label: "Lista de supressão", value: "Atualizada", icon: ListFilter }, { label: "Fila de mensagens", value: "Estável", icon: Activity }].map((item) => <div key={item.label} className="flex items-center gap-3 text-sm"><item.icon className="h-4 w-4 text-primary" /><span className="flex-1 text-muted-foreground">{item.label}</span><span className="text-xs font-medium text-foreground">{item.value}</span><Check className="h-3.5 w-3.5 text-primary" /></div>)}</div></CardContent>
+        </Card>
+      </section>
     </div>
   );
-};
 
-export default Index;
+  const renderApi = () => (
+    <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+      <Card className="glass-card rounded-[1.7rem]"><CardHeader className="p-7 pb-5"><div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20"><TerminalSquare className="h-5 w-5" /></div><CardTitle className="text-2xl tracking-[-0.04em]">Configuração do provedor</CardTitle><CardDescription className="mt-2 max-w-xl leading-6">As credenciais ficam protegidas no servidor e nunca aparecem no navegador ou no histórico de logs.</CardDescription></CardHeader><CardContent className="space-y-5 p-7 pt-1"><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Provedor</label><select value={apiProvider} onChange={(e) => setApiProvider(e.target.value)} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none ring-offset-background focus:ring-2 focus:ring-ring"><option>WhatsApp Business Platform</option><option>Outro provedor compatível</option></select></div><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Ambiente</label><div className="grid grid-cols-2 gap-2">{["Sandbox", "Produção"].map((mode) => <button key={mode} type="button" onClick={() => setApiMode(mode)} className={cn("h-11 rounded-xl border text-sm font-medium transition-colors", apiMode === mode ? "border-primary bg-primary text-primary-foreground" : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/40")}>{mode}</button>)}</div></div></div><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Endpoint da API</label><Input value="https://graph.facebook.com/v26.0/{phone_number_id}/messages" readOnly className="h-11 rounded-xl bg-secondary/30 font-mono text-xs" /></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Phone Number ID</label><Input placeholder="Informe o identificador da conta" className="h-11 rounded-xl" /></div><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Token de acesso</label><div className="relative"><Input type="password" placeholder="••••••••••••••••••••" className="h-11 rounded-xl pr-10" /><LockKeyhole className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /></div></div></div><div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="max-w-md text-xs leading-5 text-muted-foreground">O modo Produção só deve ser ativado após a confirmação explícita do administrador.</p><Button onClick={handleTestConnection} className="rounded-xl"><RefreshCw className="mr-2 h-4 w-4" /> Testar conexão</Button></div></CardContent></Card>
+      <div className="space-y-5"><Card className="glass-card rounded-[1.7rem] border-primary/20"><CardHeader className="p-7 pb-4"><div className="flex items-center justify-between"><CardTitle className="text-lg">Status da integração</CardTitle><Badge className="rounded-full bg-primary/15 text-primary hover:bg-primary/15"><span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-primary" /> Ativa</Badge></div></CardHeader><CardContent className="space-y-4 p-7 pt-1"><div className="rounded-2xl bg-secondary/60 p-4"><div className="flex items-center gap-3"><div className="rounded-xl bg-primary/15 p-2.5 text-primary"><MessageCircle className="h-5 w-5" /></div><div><p className="text-sm font-semibold">{apiProvider}</p><p className="text-xs text-muted-foreground">Ambiente {apiMode.toLowerCase()}</p></div></div></div>{[{ label: "Autenticação", value: "Protegida" }, { label: "Webhook", value: "Aguardando configuração" }, { label: "Último teste", value: "Há 4 minutos" }].map((row) => <div key={row.label} className="flex justify-between border-b border-border/50 pb-3 text-sm last:border-0 last:pb-0"><span className="text-muted-foreground">{row.label}</span><span className="font-medium">{row.value}</span></div>)}</CardContent></Card><Card className="glass-card rounded-[1.7rem]"><CardHeader className="p-7 pb-3"><CardTitle className="text-lg">Checklist de segurança</CardTitle></CardHeader><CardContent className="space-y-3 p-7 pt-2">{["Token armazenado fora do frontend", "Modo sandbox selecionado", "Erros sem dados sensíveis", "Idempotência preparada"].map((item) => <div key={item} className="flex items-center gap-3 text-sm"><CheckCircle2 className="h-4 w-4 text-primary" /><span>{item}</span></div>)}<Button variant="ghost" className="mt-2 w-full justify-between px-0 text-primary hover:bg-transparent hover:text-primary">Ver política de segurança <ArrowRight className="h-4 w-4" /></Button></CardContent></Card></div>
+    </div>
+  );
+
+  const renderCampaigns = () => (
+    <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+      <Card className="glass-card rounded-[1.7rem]"><CardHeader className="p-7 pb-4"><div className="flex items-start justify-between gap-4"><div><CardDescription className="text-[10px] font-semibold uppercase tracking-[0.18em]">Nova campanha</CardDescription><CardTitle className="mt-2 text-2xl tracking-[-0.04em]">Prepare seu próximo disparo</CardTitle></div><Badge variant="outline" className="rounded-full border-primary/30 bg-primary/10 text-primary">Rascunho</Badge></div></CardHeader><CardContent className="space-y-6 p-7 pt-3"><div className="grid grid-cols-3 gap-2">{[{ step: "01", label: "Mensagem", active: true }, { step: "02", label: "Público", active: false }, { step: "03", label: "Revisão", active: false }].map((item) => <div key={item.step} className={cn("border-t-2 pt-3", item.active ? "border-primary" : "border-border")}><p className={cn("text-[10px] font-bold tracking-[0.16em]", item.active ? "text-primary" : "text-muted-foreground")}>{item.step}</p><p className="mt-1 text-xs font-medium">{item.label}</p></div>)}</div><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Nome interno da campanha</label><Input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} className="h-11 rounded-xl" /></div><div className="space-y-2"><div className="flex items-center justify-between"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Mensagem</label><span className="text-xs text-muted-foreground">{message.length}/1024</span></div><Textarea value={message} onChange={(e) => setMessage(e.target.value)} className="min-h-36 resize-none rounded-xl leading-6" /><div className="flex flex-wrap gap-2"><span className="text-xs text-muted-foreground">Variáveis:</span>{["{{nome}}", "{{empresa}}", "{{link}}"].map((variable) => <button key={variable} type="button" onClick={() => setMessage((current) => `${current} ${variable}`)} className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 font-mono text-[10px] text-primary transition-colors hover:bg-primary/15">{variable}</button>)}</div></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Público</label><button type="button" className="flex h-11 w-full items-center justify-between rounded-xl border border-input bg-background px-3 text-sm"><span className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Clientes ativos · 42</span><ChevronDown className="h-4 w-4 text-muted-foreground" /></button></div><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Velocidade</label><button type="button" className="flex h-11 w-full items-center justify-between rounded-xl border border-input bg-background px-3 text-sm"><span className="flex items-center gap-2"><Gauge className="h-4 w-4 text-primary" /> 20 mensagens/min</span><ChevronDown className="h-4 w-4 text-muted-foreground" /></button></div></div><div className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><div className="mt-0.5 rounded-lg bg-primary/15 p-2 text-primary"><CircleDashed className="h-4 w-4" /></div><div><p className="text-sm font-semibold">Modo prévia / dry run</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Valida contatos e variáveis sem enviar mensagens reais.</p></div></div><button type="button" onClick={() => setDryRun(!dryRun)} className={cn("relative h-6 w-11 rounded-full transition-colors", dryRun ? "bg-primary" : "bg-muted")} aria-label="Alternar dry run"><span className={cn("absolute top-1 h-4 w-4 rounded-full bg-white transition-transform", dryRun ? "left-6" : "left-1")} /></button></div><div className="flex flex-col-reverse gap-3 border-t border-border/60 pt-5 sm:flex-row sm:justify-end"><Button variant="outline" className="rounded-xl" onClick={handleDryRun}><Play className="mr-2 h-4 w-4" /> Simular envio</Button><Button className="rounded-xl" onClick={() => showDemoToast("Campanha salva", "O rascunho foi salvo e ainda não envia mensagens.")}><Check className="mr-2 h-4 w-4" /> Salvar rascunho</Button></div></CardContent></Card>
+      <Card className="glass-card overflow-hidden rounded-[1.7rem]"><CardHeader className="border-b border-border/60 p-7 pb-5"><div className="flex items-center justify-between"><div><CardDescription className="text-[10px] font-semibold uppercase tracking-[0.18em]">Prévia no celular</CardDescription><CardTitle className="mt-2 text-lg">Veja antes de enviar</CardTitle></div><Smartphone className="h-5 w-5 text-primary" /></div></CardHeader><CardContent className="flex flex-col items-center gap-5 p-7"><div className="w-full max-w-[280px] rounded-[2rem] border-[6px] border-foreground/15 bg-secondary p-2 shadow-xl"><div className="overflow-hidden rounded-[1.4rem] bg-background"><div className="flex items-center gap-2 border-b border-border/60 bg-card px-3 py-3"><div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">M</div><div><p className="text-[10px] font-semibold">Meta Distribuidora</p><p className="text-[8px] text-muted-foreground">online</p></div></div><div className="min-h-48 bg-[radial-gradient(circle_at_20%_20%,hsl(var(--primary)/0.05),transparent_34%),hsl(var(--muted))] p-3"><div className="rounded-2xl rounded-tl-sm bg-card p-3 shadow-sm"><p className="text-[11px] leading-5 text-foreground">{message.replace("{{nome}}", "Mariana").replace("{{link}}", "meta.com/oferta").replace("{{empresa}}", "Meta Distribuidora")}</p><p className="mt-2 text-right text-[8px] text-muted-foreground">10:42 ✓✓</p></div></div></div></div><div className="w-full space-y-3 rounded-2xl border border-border/60 p-4"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Destinatários elegíveis</span><span className="font-semibold">42</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Bloqueados por consentimento</span><span className="font-semibold text-primary">3</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Modo atual</span><span className="font-semibold">{dryRun ? "Dry run" : "Revisão"}</span></div></div></CardContent></Card>
+    </div>
+  );
+
+  const renderContacts = () => (
+    <div className="space-y-5"><Card className="glass-card rounded-[1.7rem]"><CardHeader className="flex-col gap-5 p-7 pb-5 lg:flex-row lg:items-center lg:justify-between"><div><CardDescription className="text-[10px] font-semibold uppercase tracking-[0.18em]">Base de contatos</CardDescription><CardTitle className="mt-2 text-2xl tracking-[-0.04em]">Lista com nomes</CardTitle><p className="mt-2 text-sm text-muted-foreground">1.284 contatos totais · 1.242 com consentimento válido</p></div><div className="flex flex-wrap gap-2"><label className="inline-flex h-10 cursor-pointer items-center rounded-xl border border-border bg-secondary/40 px-3 text-sm font-medium transition-colors hover:border-primary/40"><Upload className="mr-2 h-4 w-4 text-primary" /> Importar CSV<input type="file" accept=".csv,.xlsx" className="hidden" onChange={() => showDemoToast("Prévia de importação", "O arquivo foi reconhecido. Mapeie as colunas antes de confirmar.")} /></label><Button className="rounded-xl" onClick={() => showDemoToast("Novo contato", "A tela de cadastro está pronta para receber os dados do contato.")}><UserRoundPlus className="mr-2 h-4 w-4" /> Novo contato</Button></div></CardHeader><CardContent className="p-7 pt-2"><div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center"><div className="relative flex-1"><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar por nome, telefone ou grupo..." className="h-11 rounded-xl pl-10" /></div><div className="flex gap-2"><Button variant="outline" className="rounded-xl bg-transparent"><Filter className="mr-2 h-4 w-4" /> Filtros</Button><Button variant="outline" className="rounded-xl bg-transparent"><FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar</Button></div></div>{selectedContacts.length > 0 && <div className="mb-4 flex items-center justify-between rounded-xl border border-primary/25 bg-primary/5 px-4 py-3"><span className="text-sm font-medium">{selectedContacts.length} contato(s) selecionado(s)</span><div className="flex gap-2"><Button size="sm" variant="ghost" className="text-primary" onClick={() => setActiveSection("campaigns")}>Criar disparo <ArrowRight className="ml-2 h-3.5 w-3.5" /></Button><Button size="sm" variant="ghost" onClick={() => setSelectedContacts([])}>Limpar</Button></div></div>}<div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left"><thead><tr className="border-b border-border/60 text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground"><th className="w-10 pb-3"><input type="checkbox" checked={selectedContacts.length === filteredContacts.length && filteredContacts.length > 0} onChange={(e) => setSelectedContacts(e.target.checked ? filteredContacts.map((contact) => contact.id) : [])} className="h-4 w-4 accent-[hsl(var(--primary))]" /></th><th className="pb-3">Nome</th><th className="pb-3">Telefone</th><th className="pb-3">Grupo</th><th className="pb-3">Consentimento</th><th className="pb-3">Último envio</th><th className="pb-3"></th></tr></thead><tbody>{filteredContacts.map((contact) => <tr key={contact.id} className="border-b border-border/40 text-sm last:border-0 hover:bg-secondary/30"><td className="py-4"><input type="checkbox" checked={selectedContacts.includes(contact.id)} onChange={() => toggleContact(contact.id)} className="h-4 w-4 accent-[hsl(var(--primary))]" /></td><td className="py-4"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-xs font-semibold">{contact.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</div><div><p className="font-semibold">{contact.name}</p><p className="text-xs text-muted-foreground">Incluído em 12 ago, 2026</p></div></div></td><td className="py-4 font-mono text-xs text-muted-foreground">{contact.phone}</td><td className="py-4"><span className="inline-flex items-center gap-1.5 text-xs"><Tag className="h-3.5 w-3.5 text-primary" /> {contact.group}</span></td><td className="py-4"><StatusBadge status={contact.consent} /></td><td className="py-4 text-xs text-muted-foreground">{contact.lastSend}</td><td className="py-4 text-right"><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></td></tr>)}</tbody></table></div><div className="mt-5 flex flex-col gap-3 border-t border-border/60 pt-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between"><span>Mostrando {filteredContacts.length} de 1.284 contatos</span><div className="flex items-center gap-2"><Button variant="outline" size="sm" className="rounded-lg bg-transparent" disabled>Anterior</Button><span className="rounded-lg bg-primary px-2.5 py-1.5 font-semibold text-primary-foreground">1</span><Button variant="outline" size="sm" className="rounded-lg bg-transparent">2</Button><Button variant="outline" size="sm" className="rounded-lg bg-transparent">Próxima</Button></div></div></CardContent></Card><div className="grid gap-5 md:grid-cols-3"><Card className="glass-card rounded-2xl"><CardContent className="p-5"><div className="flex items-center gap-3"><div className="rounded-xl bg-primary/15 p-2.5 text-primary"><Users className="h-4 w-4" /></div><div><p className="text-2xl font-semibold">1.242</p><p className="text-xs text-muted-foreground">Com consentimento</p></div></div></CardContent></Card><Card className="glass-card rounded-2xl"><CardContent className="p-5"><div className="flex items-center gap-3"><div className="rounded-xl bg-secondary p-2.5"><Tag className="h-4 w-4" /></div><div><p className="text-2xl font-semibold">18</p><p className="text-xs text-muted-foreground">Grupos ativos</p></div></div></CardContent></Card><Card className="glass-card rounded-2xl border-primary/20"><CardContent className="p-5"><div className="flex items-center gap-3"><div className="rounded-xl bg-primary/15 p-2.5 text-primary"><ShieldCheck className="h-4 w-4" /></div><div><p className="text-2xl font-semibold">42</p><p className="text-xs text-muted-foreground">Na lista de supressão</p></div></div></CardContent></Card></div></div>
+  );
+
+  return (
+    <div className={`relative min-h-screen overflow-hidden ${theme === "dark" ? "gpn-gradient-radial" : "gpn-gradient-radial-light"} gpn-grid`}>
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_75%_0%,hsl(var(--primary)/0.08),transparent_30%)]" aria-hidden="true" />
+      <aside className={cn("fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border/70 bg-card/95 shadow-2xl shadow-black/10 backdrop-blur-md transition-all duration-300", sidebarOpen ? "w-72" : "w-20")}>
+        <div className="border-b border-border/60 p-5"><div className={cn("flex items-center", sidebarOpen ? "gap-3" : "justify-center")}><GPNLogo className="h-10 shrink-0" />{sidebarOpen && <div className="min-w-0"><p className="text-sm font-bold tracking-[0.12em]">GPN <span className="text-primary">OS</span></p><p className="mt-0.5 truncate text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Messaging control</p></div>}</div></div>
+        <div className={cn("border-b border-border/60 p-4", sidebarOpen ? "" : "flex justify-center")}>
+          {sidebarOpen ? <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3"><img src={logoMeta} alt="Meta Distribuidora de Cosméticos" className="h-10 w-10 rounded-xl bg-white object-contain p-1" /><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">Cliente ativo</p><p className="truncate text-xs font-semibold">Meta Distribuidora</p><p className="truncate text-[10px] text-muted-foreground">Cosméticos</p></div></div> : <img src={logoMeta} alt="Meta Distribuidora de Cosméticos" className="h-9 w-9 rounded-xl bg-white object-contain p-1" />}
+        </div>
+        <nav className="flex-1 space-y-1.5 p-3">{navItems.map((item) => <button key={item.id} type="button" onClick={() => setActiveSection(item.id)} className={cn("group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all duration-200", activeSection === item.id ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-muted-foreground hover:bg-secondary hover:text-foreground", !sidebarOpen && "justify-center px-2")}><item.icon className="h-5 w-5 shrink-0" />{sidebarOpen && <span className="min-w-0"><span className="block text-sm font-semibold">{item.label}</span><span className={cn("mt-0.5 block text-[10px]", activeSection === item.id ? "text-primary-foreground/70" : "text-muted-foreground/70")}>{item.description}</span></span>}</button>)}</nav>
+        <div className="space-y-2 border-t border-border/60 p-3"><button type="button" onClick={() => setSidebarOpen(!sidebarOpen)} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground", !sidebarOpen && "justify-center px-2")}><Menu className="h-4 w-4" />{sidebarOpen && "Recolher menu"}</button><button type="button" onClick={handleSignOut} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive", !sidebarOpen && "justify-center px-2")}><LogOut className="h-4 w-4" />{sidebarOpen && "Sair do sistema"}</button></div>
+      </aside>
+
+      <main className={cn("relative z-10 min-h-screen transition-all duration-300", sidebarOpen ? "ml-72" : "ml-20")}>
+        <header className="sticky top-0 z-30 border-b border-border/70 bg-card/90 shadow-sm backdrop-blur-xl"><div className="flex flex-col gap-5 px-5 py-5 sm:px-7 lg:px-9"><div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"><div><div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> {copy.eyebrow}</div><h1 className="max-w-3xl text-2xl font-semibold leading-tight tracking-[-0.05em] sm:text-3xl">{copy.title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{copy.description}</p></div><div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-3 py-2"><img src={logoMeta} alt="Meta Distribuidora de Cosméticos" className="h-7 w-7 rounded-lg bg-white object-contain p-0.5" /><div className="hidden text-left sm:block"><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Conta selecionada</p><p className="text-xs font-semibold">Meta Distribuidora</p></div></div><ThemeToggle /><Button variant="outline" size="icon" className="rounded-xl bg-transparent" onClick={() => showDemoToast("Atualizado", "Os dados da operação foram atualizados.")}><RefreshCw className="h-4 w-4" /></Button><Button variant="outline" size="icon" className="rounded-xl bg-transparent"><Bell className="h-4 w-4" /></Button></div></div><div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Sandbox conectado</span><span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-secondary/50 px-2.5 py-1"><LockKeyhole className="h-3 w-3" /> Ambiente protegido</span><span className="ml-auto hidden items-center gap-1.5 md:inline-flex"><Activity className="h-3.5 w-3.5" /> Atualizado agora</span></div></div></header>
+        <div className="p-5 sm:p-7 lg:p-9">{activeSection === "overview" && renderOverview()}{activeSection === "api" && renderApi()}{activeSection === "campaigns" && renderCampaigns()}{activeSection === "contacts" && renderContacts()}</div>
+        <footer className="border-t border-border/60 px-5 py-5 text-center text-xs text-muted-foreground sm:px-7 lg:px-9"><span>GPN OS · Operação de mensagens</span><span className="mx-2 text-border">•</span><span>Dados e consentimentos sob controle</span></footer>
+      </main>
+    </div>
+  );
+}
