@@ -25,7 +25,7 @@ export function json(request: Request, body: unknown, status = 200): Response {
 }
 
 export function noContent(request: Request): Response {
-  return new Response("", { status: 204, headers: corsHeaders(request) });
+  return new Response(null, { status: 204, headers: corsHeaders(request) });
 }
 
 export function requiredEnv(name: string): string {
