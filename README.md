@@ -59,3 +59,11 @@ Depois de publicar as funções, a URL de callback da Meta deverá apontar para 
 5. Mantenha `META_TEST_MODE=true` durante a homologação. Só altere para `false` depois de revisar consentimento, templates, fila, limites, auditoria e o número destinatário.
 
 A interface atual não executa envio real automaticamente. A liberação de produção deve ser feita somente após uma confirmação explícita do administrador.
+
+## Recuperação de acesso V4
+
+A tela de autenticação apresenta **Esqueci minha senha** logo no início. O fluxo não usa o reset por link nem exibe remetente da Lovable: a solicitação chama `v4-request-password-code`, envia um código numérico de uso único para `iara.silva@v4company.com`, valida o código em `v4-verify-password-code` e permite definir uma nova senha somente com o token temporário retornado após a validação.
+
+Para ativar o envio real, aplique a migração `20260825200000_v4_password_recovery_codes.sql`, configure `V4_RECOVERY_CODE_PEPPER` e conecte um provedor server-side. A implementação aceita `RESEND_API_KEY` ou um endpoint próprio em `V4_EMAIL_PROVIDER_URL` com `V4_EMAIL_PROVIDER_TOKEN`. O endereço `iara.silva@v4company.com` deve estar autorizado/verificado como remetente no provedor de e-mail; não coloque a chave em `VITE_*` nem no GitHub.
+
+O código expira em 10 minutos, tem limite de tentativas, é armazenado somente como hash e não deve ser solicitado, transportado ou informado por terceiros. A produção depende da publicação das Edge Functions, aplicação da migração e configuração dos secrets no Supabase.
