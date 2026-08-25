@@ -207,10 +207,11 @@ const Index = () => {
   };
 
   return (
-    <div className={`min-h-screen flex ${theme === "dark" ? "gpn-gradient-radial" : "gpn-gradient-radial-light"}`}>
+    <div className={`relative min-h-screen flex overflow-hidden ${theme === "dark" ? "gpn-gradient-radial" : "gpn-gradient-radial-light"} gpn-grid`}>
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_70%_0%,hsl(var(--primary)/0.08),transparent_32%)]" aria-hidden="true" />
       {/* Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-card/95 backdrop-blur-md border-r border-border/50 transition-all duration-300",
+        "fixed left-0 top-0 z-40 h-screen bg-card/95 backdrop-blur-md border-r border-border/70 transition-all duration-300 shadow-2xl shadow-black/10",
         sidebarOpen ? "w-64" : "w-16"
       )}>
         <div className="flex flex-col h-full">
@@ -230,7 +231,7 @@ const Index = () => {
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                   activePanel === item.id
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 )}
               >
@@ -260,7 +261,7 @@ const Index = () => {
         sidebarOpen ? "ml-64" : "ml-16"
       )}>
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b border-border/50">
+        <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b border-border/70 shadow-sm">
           <div className="px-6 py-4">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -325,7 +326,7 @@ const Index = () => {
 
           {/* Active Panel */}
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 border-l-2 border-primary pl-3">
               {menuItems.find(m => m.id === activePanel)?.icon && (
                 <span className="text-primary">
                   {(() => {

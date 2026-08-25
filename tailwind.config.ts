@@ -104,8 +104,8 @@ export default {
           to: { opacity: "1", transform: "translateX(0)" },
         },
         "glow-pulse": {
-          "0%, 100%": { boxShadow: "0 0 20px -5px hsl(217 91% 60% / 0.3)" },
-          "50%": { boxShadow: "0 0 40px -5px hsl(217 91% 60% / 0.5)" },
+          "0%, 100%": { boxShadow: "0 0 20px -5px hsl(0 84% 58% / 0.28)" },
+          "50%": { boxShadow: "0 0 40px -5px hsl(0 84% 58% / 0.46)" },
         },
         "shimmer": {
           "0%": { backgroundPosition: "-200% 0" },
@@ -121,8 +121,8 @@ export default {
         "shimmer": "shimmer 2s linear infinite",
       },
       backgroundImage: {
-        "gpn-gradient": "linear-gradient(135deg, hsl(216 50% 6%) 0%, hsl(217 55% 18%) 50%, hsl(216 50% 8%) 100%)",
-        "gpn-radial": "radial-gradient(ellipse at 50% 0%, hsl(217 70% 25%) 0%, hsl(216 50% 8%) 70%)",
+        "gpn-gradient": "linear-gradient(135deg, hsl(0 0% 4%) 0%, hsl(0 0% 10%) 55%, hsl(0 75% 12%) 100%)",
+        "gpn-radial": "radial-gradient(ellipse at 78% 0%, hsl(0 80% 24% / 0.38) 0%, hsl(0 0% 4%) 70%)",
       },
     },
   },
