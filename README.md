@@ -1,73 +1,45 @@
-# Welcome to your Lovable project
+# V4 — Plataforma de Mensagens
 
-## Project info
+A V4 é uma interface de operação controlada para mensagens por API oficial, campanhas e contatos consentidos. O sistema foi desenhado para manter as credenciais no servidor, exigir revisão antes do envio e bloquear contatos descadastrados ou sem consentimento.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Escopo atual
 
-## How can I edit this code?
+O dashboard autenticado contém as seguintes áreas:
 
-There are several ways of editing your application.
+| Área | O que está disponível |
+|---|---|
+| **Visão geral** | Saúde da operação, campanhas recentes, volume, fila e alertas. |
+| **Mensagem via API** | Provedor, ambiente Sandbox/Produção, endpoint, Phone Number ID, token mascarado, teste demonstrativo e checklist de segurança. |
+| **Disparo** | Campanha em rascunho, mensagem com variáveis, contador, público, velocidade, dry run e prévia em celular. |
+| **Lista com nomes** | Busca, filtros, seleção em lote, consentimento, grupos, importação CSV/XLSX, exportação e paginação. |
 
-**Use Lovable**
+A interface atual usa dados fictícios e ações demonstrativas. Nenhuma mensagem real é enviada sem a implementação do backend, as credenciais seguras e uma confirmação explícita do administrador.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Próxima etapa para produção
 
-Changes made via Lovable will be committed automatically to this repo.
+Para ativar a API oficial, o backend deverá receber as credenciais por variáveis de ambiente ou secrets, implementar o adaptador do provedor, fila assíncrona, limites, retentativas, idempotência, webhooks autenticados, logs de status, auditoria, descadastro e controle de permissões. O frontend não deve receber tokens nem executar loops de disparo.
 
-**Use your preferred IDE**
+Antes do primeiro envio real, valide o provedor, os templates aprovados, o opt-in, a lista de supressão, os limites da conta e as regras vigentes na documentação oficial da [WhatsApp Business Platform](https://developers.facebook.com/docs/whatsapp/cloud-api/).
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Como editar
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+O projeto está conectado ao Lovable e ao GitHub. Alterações enviadas para a branch `main` podem ser refletidas no projeto Lovable conectado. Também é possível editar pelo Lovable, por uma IDE local ou diretamente no GitHub.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+git clone <URL_DO_REPOSITORIO>
+cd supabase-financial-dashboard-32
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Tecnologias
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+O projeto usa Vite, React, TypeScript, shadcn/ui, Tailwind CSS, React Router e Supabase para autenticação e integração futura do backend.
 
-**Use GitHub Codespaces**
+## Validação
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```sh
+npm run build
+```
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+O build deve ser executado antes de cada publicação. Nunca coloque tokens, secrets ou credenciais reais no repositório.

@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { GPNLogo } from '@/components/GPNLogo';
+import { V4Logo } from '@/components/V4Logo';
 import { useTheme } from '@/hooks/useTheme';
 import { ArrowRight, BarChart3, Check, Loader2, Lock, Mail, ShieldCheck, User } from 'lucide-react';
 
@@ -27,9 +27,9 @@ const signupSchema = loginSchema.extend({
 });
 
 const benefits = [
-  'Visão financeira em tempo real',
-  'Controle por empresa e centro de resultado',
-  'Dados organizados para decisões rápidas',
+  'Visão da operação em tempo real',
+  'Controle de campanhas e consentimento',
+  'Dados organizados para decisões seguras',
 ];
 
 export default function Auth() {
@@ -161,11 +161,11 @@ export default function Auth() {
     : isForgotPassword
       ? 'Digite seu email para receber o link de redefinição'
       : isLogin
-        ? 'Acesse o sistema de gestão financeira'
-        : 'Crie sua conta para começar';
+        ? 'Acesse a plataforma de mensagens'
+        : 'Crie sua conta para operar';
 
   return (
-    <div className={`relative min-h-screen overflow-hidden ${theme === 'dark' ? 'gpn-gradient-radial' : 'gpn-gradient-radial-light'} gpn-grid`}>
+    <div className={`relative min-h-screen overflow-hidden ${theme === 'dark' ? 'v4-gradient-radial' : 'v4-gradient-radial-light'} v4-grid`}>
       <div className="pointer-events-none absolute -left-24 top-1/3 h-72 w-72 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
       <div className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-foreground/5 blur-3xl" aria-hidden="true" />
 
@@ -177,14 +177,14 @@ export default function Auth() {
 
           <div className="relative">
             <div className="mb-12 flex items-center gap-3">
-              <GPNLogo className="h-14" />
+              <V4Logo className="h-14" />
               <div className="h-10 w-px bg-white/20" />
-              <span className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">Finance OS</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">Messaging OS</span>
             </div>
 
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-red-200">
               <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_hsl(var(--primary))]" />
-              Gestão que move negócios
+              Mensagens que movem negócios
             </div>
 
             <h1 className="max-w-xl text-5xl font-semibold leading-[1.04] tracking-[-0.055em] xl:text-6xl">
@@ -192,7 +192,7 @@ export default function Auth() {
               <span className="text-primary">Controle para crescer.</span>
             </h1>
             <p className="mt-6 max-w-lg text-base leading-7 text-white/60">
-              Uma central financeira criada para transformar números, cobranças e resultados em uma visão objetiva da operação.
+              Uma central de mensagens criada para organizar contatos, campanhas e resultados em uma visão objetiva da operação.
             </p>
           </div>
 
@@ -211,7 +211,7 @@ export default function Auth() {
             </div>
             <div className="flex items-center gap-3 border-t border-white/10 pt-5 text-sm text-white/55">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              <span>Seu controle financeiro em um só lugar.</span>
+              <span>Sua operação de mensagens em um só lugar.</span>
             </div>
           </div>
         </section>
@@ -219,8 +219,8 @@ export default function Auth() {
         <div className="mx-auto w-full max-w-md">
           <div className="mb-5 flex items-center justify-between lg:justify-end">
             <div className="flex items-center gap-2 lg:hidden">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-black text-sm font-black text-white shadow-lg dark:bg-white dark:text-black">G</div>
-              <span className="text-sm font-bold tracking-[0.16em]">GPN <span className="text-primary">DIGITAL</span></span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-black text-white shadow-lg">V4</div>
+              <span className="text-sm font-bold tracking-[0.16em]">V4</span>
             </div>
             <ThemeToggle />
           </div>

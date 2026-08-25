@@ -121,8 +121,8 @@ export default {
         "shimmer": "shimmer 2s linear infinite",
       },
       backgroundImage: {
-        "gpn-gradient": "linear-gradient(135deg, hsl(0 0% 4%) 0%, hsl(0 0% 10%) 55%, hsl(0 75% 12%) 100%)",
-        "gpn-radial": "radial-gradient(ellipse at 78% 0%, hsl(0 80% 24% / 0.38) 0%, hsl(0 0% 4%) 70%)",
+        "v4-gradient": "linear-gradient(135deg, hsl(0 0% 4%) 0%, hsl(0 0% 10%) 55%, hsl(0 75% 12%) 100%)",
+        "v4-radial": "radial-gradient(ellipse at 78% 0%, hsl(0 80% 24% / 0.38) 0%, hsl(0 0% 4%) 70%)",
       },
     },
   },

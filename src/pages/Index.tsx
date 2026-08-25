@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { GPNLogo } from "@/components/GPNLogo";
+import { V4Logo } from "@/components/V4Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
@@ -251,10 +251,10 @@ export default function Index() {
   );
 
   return (
-    <div className={`relative min-h-screen overflow-hidden ${theme === "dark" ? "gpn-gradient-radial" : "gpn-gradient-radial-light"} gpn-grid`}>
+    <div className={`relative min-h-screen overflow-hidden ${theme === "dark" ? "v4-gradient-radial" : "v4-gradient-radial-light"} v4-grid`}>
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_75%_0%,hsl(var(--primary)/0.08),transparent_30%)]" aria-hidden="true" />
       <aside className={cn("fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border/70 bg-card/95 shadow-2xl shadow-black/10 backdrop-blur-md transition-all duration-300", sidebarOpen ? "w-72" : "w-20")}>
-        <div className="border-b border-border/60 p-5"><div className={cn("flex items-center", sidebarOpen ? "gap-3" : "justify-center")}><GPNLogo className="h-10 shrink-0" />{sidebarOpen && <div className="min-w-0"><p className="text-sm font-bold tracking-[0.12em]">GPN <span className="text-primary">OS</span></p><p className="mt-0.5 truncate text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Messaging control</p></div>}</div></div>
+        <div className="border-b border-border/60 p-5"><div className={cn("flex items-center", sidebarOpen ? "gap-3" : "justify-center")}><V4Logo className="h-10 shrink-0" />{sidebarOpen && <div className="min-w-0"><p className="text-sm font-bold tracking-[0.12em]">V4</p><p className="mt-0.5 truncate text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Messaging control</p></div>}</div></div>
         <div className={cn("border-b border-border/60 p-4", sidebarOpen ? "" : "flex justify-center")}>
           {sidebarOpen ? <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3"><img src={logoMeta} alt="Meta Distribuidora de Cosméticos" className="h-10 w-10 rounded-xl bg-white object-contain p-1" /><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">Cliente ativo</p><p className="truncate text-xs font-semibold">Meta Distribuidora</p><p className="truncate text-[10px] text-muted-foreground">Cosméticos</p></div></div> : <img src={logoMeta} alt="Meta Distribuidora de Cosméticos" className="h-9 w-9 rounded-xl bg-white object-contain p-1" />}
         </div>
@@ -265,7 +265,7 @@ export default function Index() {
       <main className={cn("relative z-10 min-h-screen transition-all duration-300", sidebarOpen ? "ml-72" : "ml-20")}>
         <header className="sticky top-0 z-30 border-b border-border/70 bg-card/90 shadow-sm backdrop-blur-xl"><div className="flex flex-col gap-5 px-5 py-5 sm:px-7 lg:px-9"><div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"><div><div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> {copy.eyebrow}</div><h1 className="max-w-3xl text-2xl font-semibold leading-tight tracking-[-0.05em] sm:text-3xl">{copy.title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{copy.description}</p></div><div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-3 py-2"><img src={logoMeta} alt="Meta Distribuidora de Cosméticos" className="h-7 w-7 rounded-lg bg-white object-contain p-0.5" /><div className="hidden text-left sm:block"><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Conta selecionada</p><p className="text-xs font-semibold">Meta Distribuidora</p></div></div><ThemeToggle /><Button variant="outline" size="icon" className="rounded-xl bg-transparent" onClick={() => showDemoToast("Atualizado", "Os dados da operação foram atualizados.")}><RefreshCw className="h-4 w-4" /></Button><Button variant="outline" size="icon" className="rounded-xl bg-transparent"><Bell className="h-4 w-4" /></Button></div></div><div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Sandbox conectado</span><span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-secondary/50 px-2.5 py-1"><LockKeyhole className="h-3 w-3" /> Ambiente protegido</span><span className="ml-auto hidden items-center gap-1.5 md:inline-flex"><Activity className="h-3.5 w-3.5" /> Atualizado agora</span></div></div></header>
         <div className="p-5 sm:p-7 lg:p-9">{activeSection === "overview" && renderOverview()}{activeSection === "api" && renderApi()}{activeSection === "campaigns" && renderCampaigns()}{activeSection === "contacts" && renderContacts()}</div>
-        <footer className="border-t border-border/60 px-5 py-5 text-center text-xs text-muted-foreground sm:px-7 lg:px-9"><span>GPN OS · Operação de mensagens</span><span className="mx-2 text-border">•</span><span>Dados e consentimentos sob controle</span></footer>
+        <footer className="border-t border-border/60 px-5 py-5 text-center text-xs text-muted-foreground sm:px-7 lg:px-9"><span>V4 · Operação de mensagens</span><span className="mx-2 text-border">•</span><span>Dados e consentimentos sob controle</span></footer>
       </main>
     </div>
   );

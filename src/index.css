@@ -144,55 +144,55 @@
     @apply bg-card/85 backdrop-blur-md border border-border/70 shadow-xl shadow-black/10;
   }
 
-  .gpn-gradient {
+  .v4-gradient {
     background:
       radial-gradient(circle at 12% 0%, hsl(0 84% 58% / 0.22), transparent 32%),
       linear-gradient(135deg, hsl(0 0% 4%) 0%, hsl(0 0% 10%) 55%, hsl(0 75% 12%) 100%);
   }
 
-  .gpn-gradient-radial {
+  .v4-gradient-radial {
     background:
       radial-gradient(ellipse at 78% 0%, hsl(0 80% 24% / 0.38) 0%, transparent 38%),
       radial-gradient(ellipse at 18% 20%, hsl(0 0% 20% / 0.42) 0%, transparent 44%),
       linear-gradient(145deg, hsl(0 0% 4%) 0%, hsl(0 0% 8%) 58%, hsl(0 0% 3%) 100%);
   }
 
-  .gpn-gradient-light {
+  .v4-gradient-light {
     background:
       radial-gradient(circle at 12% 0%, hsl(0 84% 52% / 0.14), transparent 34%),
       linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(0 0% 96%) 58%, hsl(0 45% 96%) 100%);
   }
 
-  .gpn-gradient-radial-light {
+  .v4-gradient-radial-light {
     background:
       radial-gradient(ellipse at 82% 0%, hsl(0 84% 52% / 0.13) 0%, transparent 34%),
       radial-gradient(ellipse at 14% 20%, hsl(0 0% 90% / 0.7) 0%, transparent 44%),
       linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(0 0% 97%) 62%, hsl(0 30% 97%) 100%);
   }
 
-  .gpn-glow {
+  .v4-glow {
     box-shadow: 0 0 40px -10px hsl(0 84% 58% / 0.34);
   }
 
-  .gpn-text-gradient {
+  .v4-text-gradient {
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(135deg, hsl(0 84% 64%), hsl(0 84% 46%));
   }
 
-  .gpn-grid {
+  .v4-grid {
     background-image:
       linear-gradient(hsl(0 0% 100% / 0.035) 1px, transparent 1px),
       linear-gradient(90deg, hsl(0 0% 100% / 0.035) 1px, transparent 1px);
     background-size: 32px 32px;
   }
 
-  .dark .gpn-grid {
+  .dark .v4-grid {
     background-image:
       linear-gradient(hsl(0 0% 100% / 0.035) 1px, transparent 1px),
       linear-gradient(90deg, hsl(0 0% 100% / 0.035) 1px, transparent 1px);
   }
 
-  .light .gpn-grid {
+  .light .v4-grid {
     background-image:
       linear-gradient(hsl(0 0% 0% / 0.035) 1px, transparent 1px),
       linear-gradient(90deg, hsl(0 0% 0% / 0.035) 1px, transparent 1px);
