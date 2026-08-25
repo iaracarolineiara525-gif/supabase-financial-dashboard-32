@@ -14,3 +14,12 @@ verify_jwt = false
 
 [functions.v4-pin-logout]
 verify_jwt = false
+
+[functions.meta-templates-list]
+verify_jwt = false
+
+[functions.meta-templates-create]
+verify_jwt = false
+
+[functions.message-contacts-import]
+verify_jwt = false
