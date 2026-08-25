@@ -11,7 +11,7 @@ export function corsHeaders(request: Request): Record<string, string> {
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-idempotency-key",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-idempotency-key, x-v4-pin-session, x-v4-client-id",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Vary": "Origin",
   };
@@ -38,6 +38,17 @@ export function adminClient(): AdminClient {
   return createClient(requiredEnv("SUPABASE_URL"), requiredEnv("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+}
+
+export async function requirePinSession(request: Request) {
+  const sessionToken = request.headers.get("x-v4-pin-session")?.trim();
+  if (!sessionToken) throw new Error("PIN session required");
+
+  const sessionHash = await sha256Hex(sessionToken);
+  const { data, error } = await adminClient().rpc("v4_pin_validate_session", { p_session_hash: sessionHash });
+  const result = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+  if (error || !result?.ok) throw new Error("PIN session expired");
+  return { sessionHash, expiresAt: typeof result.expires_at === "string" ? result.expires_at : null };
 }
 
 export async function requireUser(request: Request) {

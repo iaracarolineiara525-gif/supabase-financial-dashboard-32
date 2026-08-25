@@ -1,19 +1,19 @@
-import { adminClient, isTestMode, json, metaRequest, noContent, requireUser, safeErrorMessage } from "../_shared/meta.ts";
+import { adminClient, isTestMode, json, metaRequest, noContent, requirePinSession, safeErrorMessage } from "../_shared/meta.ts";
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return noContent(request);
   if (request.method !== "POST") return json(request, { error: "Method not allowed" }, 405);
 
   try {
-    const user = await requireUser(request);
+    const session = await requirePinSession(request);
     const { data: phone } = await metaRequest(`/${Deno.env.get("META_PHONE_NUMBER_ID")}?fields=id,display_phone_number,verified_name,quality_rating`);
     const { data: account } = await metaRequest(`/${Deno.env.get("META_WABA_ID")}?fields=id,name`);
 
     const supabase = adminClient();
     await supabase.from("message_audit_logs").insert({
-      actor_id: user.id,
+      actor_id: null,
       action: "meta_connection_test",
-      metadata: { test_mode: isTestMode(), phone_id: Deno.env.get("META_PHONE_NUMBER_ID"), success: true },
+      metadata: { test_mode: isTestMode(), phone_id: Deno.env.get("META_PHONE_NUMBER_ID"), success: true, session_expires_at: session.expiresAt },
     });
 
     return json(request, {
@@ -26,14 +26,13 @@ Deno.serve(async (request) => {
   } catch (error) {
     const safeMessage = safeErrorMessage(error);
     try {
-      const user = await requireUser(request);
       await adminClient().from("message_audit_logs").insert({
-        actor_id: user.id,
+        actor_id: null,
         action: "meta_connection_test_failed",
         metadata: { test_mode: isTestMode(), error: safeMessage },
       });
     } catch {
-      // Do not replace the useful API error with a logging error.
+      // Keep the external response generic if audit logging fails.
     }
     return json(request, { ok: false, error: safeMessage }, 400);
   }

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import logoMeta from "@/assets/logo-meta-distribuidora.png";
 import { supabase } from "@/integrations/supabase/client";
+import { pinSessionHeaders } from "@/lib/v4PinSession";
 import {
   Activity,
   AlertTriangle,
@@ -175,7 +176,7 @@ export default function Index() {
 
   const handleTestConnection = async () => {
     setIsCheckingConnection(true);
-    const { data, error } = await supabase.functions.invoke("meta-health", { body: {} });
+    const { data, error } = await supabase.functions.invoke("meta-health", { body: {}, headers: pinSessionHeaders() });
     setIsCheckingConnection(false);
     if (error || !data?.ok) {
       toast({ title: "Falha na conexão", description: data?.error || error?.message || "Não foi possível validar a Meta.", variant: "destructive" });
@@ -190,7 +191,7 @@ export default function Index() {
       return;
     }
     setIsSending(true);
-    const { data, error } = await supabase.functions.invoke("meta-send", { body: { to: testRecipient, message, dryRun: true, idempotencyKey: `dry-run-${Date.now()}` } });
+    const { data, error } = await supabase.functions.invoke("meta-send", { body: { to: testRecipient, message, dryRun: true, idempotencyKey: `dry-run-${Date.now()}` }, headers: pinSessionHeaders() });
     setIsSending(false);
     if (error || !data?.ok) {
       toast({ title: "Dry run não concluído", description: data?.error || error?.message || "Verifique a configuração do backend.", variant: "destructive" });
@@ -211,7 +212,7 @@ export default function Index() {
     const confirmed = window.confirm(`Confirma o envio REAL da campanha "${campaignName}" para 1 destinatário?`);
     if (!confirmed) return;
     setIsSending(true);
-    const { data, error } = await supabase.functions.invoke("meta-send", { body: { to: testRecipient, message, dryRun: false, idempotencyKey: `manual-${Date.now()}` } });
+    const { data, error } = await supabase.functions.invoke("meta-send", { body: { to: testRecipient, message, dryRun: false, idempotencyKey: `manual-${Date.now()}` }, headers: pinSessionHeaders() });
     setIsSending(false);
     if (error || !data?.ok) {
       toast({ title: "Envio não realizado", description: data?.error || error?.message || "O backend bloqueou o envio.", variant: "destructive" });

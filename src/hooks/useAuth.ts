@@ -1,68 +1,59 @@
-import { useState, useEffect } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { clearPinSessionToken, getPinSessionToken, pinSessionHeaders, setPinSessionToken } from '@/lib/v4PinSession';
+
+type PinUser = { id: string; access: 'pin' };
+
+type AuthError = { error: Error | null };
+
+function responseError(data: unknown, fallback: string): Error {
+  const message = data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : fallback;
+  return new Error(message);
+}
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(() => Boolean(getPinSessionToken()));
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    const refresh = () => setAuthenticated(Boolean(getPinSessionToken()));
+    window.addEventListener('storage', refresh);
+    return () => window.removeEventListener('storage', refresh);
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+  const signIn = async (pin: string): Promise<AuthError> => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('v4-pin-login', { body: { pin } });
+      if (error || !data?.ok || typeof data.sessionToken !== 'string') {
+        return { error: responseError(data, error?.message || 'PIN inválido.') };
+      }
+      setPinSessionToken(data.sessionToken);
+      setAuthenticated(true);
+      return { error: null };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signOut = async (): Promise<AuthError> => {
+    const token = getPinSessionToken();
+    clearPinSessionToken();
+    setAuthenticated(false);
+    if (!token) return { error: null };
+
+    const { error } = await supabase.functions.invoke('v4-pin-logout', {
+      body: {},
+      headers: pinSessionHeaders(token),
     });
-    return { error };
+    return { error: error ? new Error(error.message) : null };
   };
-
-  const signUp = async (email: string, password: string, displayName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          display_name: displayName,
-        },
-      },
-    });
-    return { error };
-  };
-
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
-  };
-
 
   return {
-    user,
-    session,
+    user: authenticated ? ({ id: 'pin-operator', access: 'pin' } satisfies PinUser) : null,
+    session: authenticated ? { access: 'pin' as const } : null,
     loading,
     signIn,
-    signUp,
     signOut,
   };
 }

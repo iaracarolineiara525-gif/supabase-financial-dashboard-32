@@ -60,10 +60,10 @@ Depois de publicar as funções, a URL de callback da Meta deverá apontar para 
 
 A interface atual não executa envio real automaticamente. A liberação de produção deve ser feita somente após uma confirmação explícita do administrador.
 
-## Recuperação de acesso V4
+## Acesso PIN V4
 
-A tela de autenticação apresenta **Esqueci minha senha** logo no início. O fluxo não usa o reset por link nem exibe remetente da Lovable: a solicitação chama `v4-request-password-code`, envia um código numérico de uso único para `iara.silva@v4company.com`, valida o código em `v4-verify-password-code` e permite definir uma nova senha somente com o token temporário retornado após a validação.
+A tela pública usa um acesso único por PIN de seis dígitos. O PIN nunca fica no frontend, no GitHub ou em mensagens: a função `v4-pin-login` recebe a tentativa por HTTPS, calcula o hash usando o pepper server-side, compara no banco e emite uma sessão temporária revogável. A interface não exibe e-mail, cadastro ou recuperação automática.
 
-Para ativar o envio real, aplique a migração `20260825200000_v4_password_recovery_codes.sql`, configure `V4_RECOVERY_CODE_PEPPER` e conecte um provedor server-side. A implementação aceita `RESEND_API_KEY` ou um endpoint próprio em `V4_EMAIL_PROVIDER_URL` com `V4_EMAIL_PROVIDER_TOKEN`. O endereço `iara.silva@v4company.com` deve estar autorizado/verificado como remetente no provedor de e-mail; não coloque a chave em `VITE_*` nem no GitHub.
+A proteção aplica limite por fingerprint de requisição, contador server-side e bloqueio progressivo após tentativas consecutivas. A sessão é armazenada apenas na sessão da aba do navegador e é enviada às funções Meta pelo cabeçalho `x-v4-pin-session`. O logout revoga a sessão no banco por meio de `v4-pin-logout`.
 
-O código expira em 10 minutos, tem limite de tentativas, é armazenado somente como hash e não deve ser solicitado, transportado ou informado por terceiros. A produção depende da publicação das Edge Functions, aplicação da migração e configuração dos secrets no Supabase.
+Para configurar o acesso, defina exclusivamente no secret manager do Supabase `V4_PIN_HASH` e `V4_PIN_PEPPER`. O PIN operacional não deve ser colocado em `VITE_*`, no repositório, em logs ou na conversa. Essa escolha reduz a segurança em relação a contas individuais Supabase e não oferece recuperação automática; a troca do PIN deve ser feita administrativamente no secret manager.

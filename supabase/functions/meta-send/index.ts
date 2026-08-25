@@ -1,4 +1,4 @@
-import { adminClient, isE164, isTestMode, json, metaRequest, noContent, normalizePhone, phoneDigits, requireUser, safeErrorMessage } from "../_shared/meta.ts";
+import { adminClient, isE164, isTestMode, json, metaRequest, noContent, normalizePhone, phoneDigits, requirePinSession, safeErrorMessage } from "../_shared/meta.ts";
 
 function stringValue(value: unknown, field: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${field} is required`);
@@ -9,9 +9,8 @@ Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return noContent(request);
   if (request.method !== "POST") return json(request, { error: "Method not allowed" }, 405);
 
-  let user;
   try {
-    user = await requireUser(request);
+    await requirePinSession(request);
     const body = await request.json();
     const to = normalizePhone(stringValue(body.to, "to"));
     const text = typeof body.message === "string" ? body.message.trim() : "";
@@ -34,7 +33,7 @@ Deno.serve(async (request) => {
     }
 
     const { data: messageRow, error: insertError } = await supabase.from("message_outbox").insert({
-      actor_id: user.id,
+      actor_id: null,
       to_phone_e164: phoneDigits(to),
       message_type: templateName ? "template" : "text",
       body_preview: text.slice(0, 500),
@@ -46,7 +45,7 @@ Deno.serve(async (request) => {
     if (insertError) throw insertError;
 
     if (dryRun) {
-      await supabase.from("message_audit_logs").insert({ actor_id: user.id, action: "meta_message_dry_run", metadata: { outbox_id: messageRow.id, to: phoneDigits(to), template: templateName || null } });
+      await supabase.from("message_audit_logs").insert({ actor_id: null, action: "meta_message_dry_run", metadata: { outbox_id: messageRow.id, to: phoneDigits(to), template: templateName || null } });
       return json(request, { ok: true, dryRun: true, message: messageRow, notice: "Dry run completed. No real message was sent." });
     }
 
@@ -58,12 +57,12 @@ Deno.serve(async (request) => {
       const { data } = await metaRequest(`/${Deno.env.get("META_PHONE_NUMBER_ID")}/messages`, { method: "POST", body: JSON.stringify(payload) });
       const externalId = Array.isArray(data.messages) && data.messages[0] && typeof data.messages[0] === "object" ? (data.messages[0] as Record<string, unknown>).id : null;
       await supabase.from("message_outbox").update({ status: "processando", external_id: typeof externalId === "string" ? externalId : null, sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", messageRow.id);
-      await supabase.from("message_audit_logs").insert({ actor_id: user.id, action: "meta_message_sent_request", metadata: { outbox_id: messageRow.id, external_id: externalId, to: phoneDigits(to) } });
+      await supabase.from("message_audit_logs").insert({ actor_id: null, action: "meta_message_sent_request", metadata: { outbox_id: messageRow.id, external_id: externalId, to: phoneDigits(to) } });
       return json(request, { ok: true, dryRun: false, message: { ...messageRow, status: "processando", externalId } });
     } catch (providerError) {
       const providerMessage = safeErrorMessage(providerError);
       await supabase.from("message_outbox").update({ status: "falhou", last_error: providerMessage, updated_at: new Date().toISOString() }).eq("id", messageRow.id);
-      await supabase.from("message_audit_logs").insert({ actor_id: user.id, action: "meta_message_send_failed", metadata: { outbox_id: messageRow.id, error: providerMessage } });
+      await supabase.from("message_audit_logs").insert({ actor_id: null, action: "meta_message_send_failed", metadata: { outbox_id: messageRow.id, error: providerMessage } });
       return json(request, { ok: false, dryRun: false, error: providerMessage, messageId: messageRow.id }, 502);
     }
   } catch (error) {

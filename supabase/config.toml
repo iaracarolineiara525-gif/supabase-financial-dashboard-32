@@ -4,16 +4,13 @@ project_id = "wtmivgqgvsubgkoyfgwi"
 verify_jwt = false
 
 [functions.meta-health]
-verify_jwt = true
+verify_jwt = false
 
 [functions.meta-send]
-verify_jwt = true
-
-[functions.v4-request-password-code]
 verify_jwt = false
 
-[functions.v4-verify-password-code]
+[functions.v4-pin-login]
 verify_jwt = false
 
-[functions.v4-reset-password]
+[functions.v4-pin-logout]
 verify_jwt = false
