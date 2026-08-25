@@ -43,3 +43,19 @@ npm run build
 ```
 
 O build deve ser executado antes de cada publicação. Nunca coloque tokens, secrets ou credenciais reais no repositório.
+
+## Backend da Meta
+
+A integração server-side fica em `supabase/functions/`. A função `meta-health` valida o acesso ao Phone Number ID e à WABA sem enviar mensagens. A função `meta-send` exige autenticação, valida o telefone em E.164, bloqueia a lista de supressão, evita duplicidade por idempotência e permanece em dry run enquanto `META_TEST_MODE=true`. A função `meta-webhook` responde ao desafio da Meta, valida `X-Hub-Signature-256`, deduplica eventos e atualiza os status de mensagens.
+
+Depois de publicar as funções, a URL de callback da Meta deverá apontar para a URL HTTPS real da função `meta-webhook`. Não use o domínio do frontend como webhook se ele apenas retornar o HTML da SPA.
+
+### Publicação segura
+
+1. Aplique a migração `supabase/migrations/20260825193000_messaging_platform.sql` no projeto Supabase.
+2. Configure os valores de `.env.example` como secrets server-side. Nunca os coloque em `VITE_*` nem os commite.
+3. Publique `meta-health`, `meta-send` e `meta-webhook`.
+4. Teste o `GET` do webhook com o verify token e depois valide um `POST` assinado de teste.
+5. Mantenha `META_TEST_MODE=true` durante a homologação. Só altere para `false` depois de revisar consentimento, templates, fila, limites, auditoria e o número destinatário.
+
+A interface atual não executa envio real automaticamente. A liberação de produção deve ser feita somente após uma confirmação explícita do administrador.
