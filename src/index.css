@@ -1,125 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* White / black / red light theme */
-    --background: 0 0% 98%;
-    --foreground: 0 0% 8%;
+    /* Light Theme - GPN Digital Style */
+    --background: 210 40% 98%;
+    --foreground: 216 50% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 8%;
+    --card-foreground: 216 50% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
+    --popover-foreground: 216 50% 12%;
 
-    --primary: 0 80% 47%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 217 91% 50%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 0 0% 94%;
-    --secondary-foreground: 0 0% 12%;
+    --secondary: 217 30% 93%;
+    --secondary-foreground: 216 50% 12%;
 
-    --muted: 0 0% 94%;
-    --muted-foreground: 0 0% 42%;
+    --muted: 217 30% 93%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 0 80% 47%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 217 91% 50%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 84% 52%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
 
-    /* Neutral semantics keep the visual language monochrome. */
-    --success: 0 0% 18%;
-    --success-foreground: 0 0% 100%;
-    --warning: 0 80% 47%;
-    --warning-foreground: 0 0% 100%;
-    --info: 0 0% 18%;
-    --info-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 210 40% 98%;
 
-    --border: 0 0% 86%;
-    --input: 0 0% 86%;
-    --ring: 0 80% 47%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 216 50% 12%;
 
-    --radius: 0.9rem;
+    --info: 217 91% 50%;
+    --info-foreground: 210 40% 98%;
+
+    --border: 217 20% 85%;
+    --input: 217 20% 85%;
+    --ring: 217 91% 50%;
+
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 10%;
-    --sidebar-primary: 0 80% 47%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 95%;
-    --sidebar-accent-foreground: 0 0% 10%;
-    --sidebar-border: 0 0% 88%;
-    --sidebar-ring: 0 80% 47%;
+    --sidebar-foreground: 216 50% 12%;
+    --sidebar-primary: 217 91% 50%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 217 30% 93%;
+    --sidebar-accent-foreground: 216 50% 12%;
+    --sidebar-border: 217 20% 85%;
+    --sidebar-ring: 217 91% 50%;
 
-    --chart-1: 0 80% 47%;
-    --chart-2: 0 0% 12%;
-    --chart-3: 0 0% 42%;
-    --chart-4: 0 65% 65%;
-    --chart-5: 0 0% 74%;
+    --chart-1: 217 91% 50%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 45 93% 47%;
+    --chart-4: 0 72% 51%;
+    --chart-5: 215 16% 47%;
   }
 
   .dark {
-    /* Black / graphite / red dark theme */
-    --background: 0 0% 5%;
-    --foreground: 0 0% 96%;
+    /* Dark Theme - GPN Digital Style */
+    --background: 216 50% 8%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 96%;
+    --card: 216 45% 12%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 96%;
+    --popover: 216 45% 12%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 0 84% 58%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 94%;
+    --secondary: 216 40% 18%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 66%;
+    --muted: 216 40% 18%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 0 84% 58%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 82% 56%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
 
-    --success: 0 0% 84%;
-    --success-foreground: 0 0% 7%;
-    --warning: 0 84% 58%;
-    --warning-foreground: 0 0% 100%;
-    --info: 0 0% 84%;
-    --info-foreground: 0 0% 7%;
+    --success: 142 71% 45%;
+    --success-foreground: 210 40% 98%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 84% 58%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 216 50% 8%;
 
-    --sidebar-background: 0 0% 7%;
-    --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 0 84% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 14%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 0 84% 58%;
+    --info: 217 91% 60%;
+    --info-foreground: 210 40% 98%;
 
-    --chart-1: 0 84% 58%;
-    --chart-2: 0 0% 94%;
-    --chart-3: 0 0% 66%;
-    --chart-4: 0 65% 42%;
-    --chart-5: 0 0% 35%;
+    --border: 216 35% 20%;
+    --input: 216 35% 20%;
+    --ring: 217 91% 60%;
+
+    --sidebar-background: 216 50% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 216 40% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 216 35% 20%;
+    --sidebar-ring: 217 91% 60%;
+
+    --chart-1: 217 91% 60%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 45 93% 47%;
+    --chart-4: 0 72% 51%;
+    --chart-5: 215 20% 65%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
-  }
-
-  html {
-    background: hsl(var(--background));
   }
 
   body {
@@ -130,71 +131,51 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
   }
-
-  button,
-  input,
-  textarea,
-  select {
-    font-family: inherit;
-  }
 }
 
 @layer utilities {
   .glass-card {
-    @apply bg-card/85 backdrop-blur-md border border-border/70 shadow-xl shadow-black/10;
+    @apply bg-card/80 backdrop-blur-sm border border-border/50 shadow-lg shadow-black/10;
   }
 
   .gpn-gradient {
-    background:
-      radial-gradient(circle at 12% 0%, hsl(0 84% 58% / 0.22), transparent 32%),
-      linear-gradient(135deg, hsl(0 0% 4%) 0%, hsl(0 0% 10%) 55%, hsl(0 75% 12%) 100%);
+    background: linear-gradient(135deg, 
+      hsl(216 50% 6%) 0%, 
+      hsl(217 55% 18%) 50%, 
+      hsl(216 50% 8%) 100%
+    );
   }
 
   .gpn-gradient-radial {
-    background:
-      radial-gradient(ellipse at 78% 0%, hsl(0 80% 24% / 0.38) 0%, transparent 38%),
-      radial-gradient(ellipse at 18% 20%, hsl(0 0% 20% / 0.42) 0%, transparent 44%),
-      linear-gradient(145deg, hsl(0 0% 4%) 0%, hsl(0 0% 8%) 58%, hsl(0 0% 3%) 100%);
+    background: radial-gradient(
+      ellipse at 50% 0%,
+      hsl(217 70% 25%) 0%,
+      hsl(216 50% 8%) 70%
+    );
   }
 
   .gpn-gradient-light {
-    background:
-      radial-gradient(circle at 12% 0%, hsl(0 84% 52% / 0.14), transparent 34%),
-      linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(0 0% 96%) 58%, hsl(0 45% 96%) 100%);
+    background: linear-gradient(135deg, 
+      hsl(217 30% 96%) 0%, 
+      hsl(217 40% 92%) 50%, 
+      hsl(217 30% 96%) 100%
+    );
   }
 
   .gpn-gradient-radial-light {
-    background:
-      radial-gradient(ellipse at 82% 0%, hsl(0 84% 52% / 0.13) 0%, transparent 34%),
-      radial-gradient(ellipse at 14% 20%, hsl(0 0% 90% / 0.7) 0%, transparent 44%),
-      linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(0 0% 97%) 62%, hsl(0 30% 97%) 100%);
+    background: radial-gradient(
+      ellipse at 50% 0%,
+      hsl(217 50% 95%) 0%,
+      hsl(210 40% 98%) 70%
+    );
   }
 
   .gpn-glow {
-    box-shadow: 0 0 40px -10px hsl(0 84% 58% / 0.34);
+    box-shadow: 0 0 40px -10px hsl(217 91% 60% / 0.3);
   }
 
   .gpn-text-gradient {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(0 84% 64%), hsl(0 84% 46%));
-  }
-
-  .gpn-grid {
-    background-image:
-      linear-gradient(hsl(0 0% 100% / 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(0 0% 100% / 0.035) 1px, transparent 1px);
-    background-size: 32px 32px;
-  }
-
-  .dark .gpn-grid {
-    background-image:
-      linear-gradient(hsl(0 0% 100% / 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(0 0% 100% / 0.035) 1px, transparent 1px);
-  }
-
-  .light .gpn-grid {
-    background-image:
-      linear-gradient(hsl(0 0% 0% / 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(0 0% 0% / 0.035) 1px, transparent 1px);
+    background-image: linear-gradient(135deg, hsl(217 91% 70%), hsl(217 91% 50%));
   }
 }
