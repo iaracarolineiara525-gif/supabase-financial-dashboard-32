@@ -4,6 +4,7 @@ const MAX_ROWS = 500;
 const MAX_NAME_LENGTH = 160;
 const MAX_EMAIL_LENGTH = 320;
 const ALLOWED_CONSENT = new Set(["consented", "pending", "revoked"]);
+const ALLOWED_CONSENT_CATEGORIES = new Set(["all", "utility", "marketing", "authentication"]);
 
 type ImportRow = {
   name?: unknown;
@@ -12,6 +13,9 @@ type ImportRow = {
   group?: unknown;
   consent?: unknown;
   consentSource?: unknown;
+  consentCategory?: unknown;
+  consentNoticeVersion?: unknown;
+  consentChannel?: unknown;
 };
 
 function textValue(value: unknown, maxLength: number): string {
@@ -25,6 +29,24 @@ function consentValue(value: unknown): "consented" | "pending" | "revoked" {
   return "pending";
 }
 
+function normalizeConsentCategory(value: unknown): string {
+  const normalized = textValue(value, 24).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const aliases: Record<string, string> = {
+    todos: "all",
+    todas: "all",
+    qualquer: "all",
+    utilidade: "utility",
+    utilitario: "utility",
+    utilitaria: "utility",
+    promocao: "marketing",
+    promotion: "marketing",
+    promotional: "marketing",
+    autenticacao: "authentication",
+    auth: "authentication",
+  };
+  return aliases[normalized] || normalized || "all";
+}
+
 function validateRow(row: ImportRow, rowNumber: number) {
   const name = textValue(row.name, MAX_NAME_LENGTH);
   const rawPhone = textValue(row.phone, 40);
@@ -33,11 +55,15 @@ function validateRow(row: ImportRow, rowNumber: number) {
   const group = textValue(row.group, 120) || null;
   const consent = consentValue(row.consent);
   const consentSource = textValue(row.consentSource, 120) || "excel_import";
+  const consentCategoryValue = normalizeConsentCategory(row.consentCategory);
+  const consentNoticeVersion = textValue(row.consentNoticeVersion, 120) || null;
+  const consentChannel = textValue(row.consentChannel, 80) || "excel_import";
 
   if (!name) throw new Error(`Row ${rowNumber}: name is required`);
   if (!isE164(phone)) throw new Error(`Row ${rowNumber}: phone must use international E.164 format`);
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error(`Row ${rowNumber}: invalid email`);
   if (!ALLOWED_CONSENT.has(consent)) throw new Error(`Row ${rowNumber}: invalid consent status`);
+  if (!ALLOWED_CONSENT_CATEGORIES.has(consentCategoryValue)) throw new Error(`Row ${rowNumber}: invalid consent category`);
 
   return {
     full_name: name,
@@ -48,6 +74,11 @@ function validateRow(row: ImportRow, rowNumber: number) {
     consent_status: consent,
     consent_at: consent === "consented" ? new Date().toISOString() : null,
     consent_source: consentSource,
+    consent_category: consentCategoryValue,
+    consent_notice_version: consentNoticeVersion,
+    consent_channel: consentChannel,
+    consent_metadata: { imported: true, source: consentSource },
+    opt_out_at: consent === "revoked" ? new Date().toISOString() : null,
     subscription_status: consent === "revoked" ? "unsubscribed" : "active",
     updated_at: new Date().toISOString(),
   };
@@ -96,7 +127,7 @@ Deno.serve(async (request) => {
       actor_id: null,
       operator_key: session.operatorKey,
       action: "message_contacts_imported",
-      metadata: { received: body.rows.length, deduplicated: deduplicated.length, created, updated, blocked_by_suppression: blockedBySuppression, duplicate_rows: duplicateRows },
+      metadata: { received: body.rows.length, deduplicated: deduplicated.length, created, updated, blocked_by_suppression: blockedBySuppression, duplicate_rows: duplicateRows, consent_provenance: true },
     });
 
     return json(request, {

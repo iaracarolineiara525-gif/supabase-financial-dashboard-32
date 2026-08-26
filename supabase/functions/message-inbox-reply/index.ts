@@ -61,7 +61,7 @@ Deno.serve(async (request) => {
         message_type: "text",
         body_preview: text.slice(0, 500),
         idempotency_key: idempotencyKey,
-        status: dryRun ? "simulada" : "pendente",
+        status: dryRun ? "simulada" : "pending",
         dry_run: dryRun,
       })
       .select("id, status, idempotency_key")

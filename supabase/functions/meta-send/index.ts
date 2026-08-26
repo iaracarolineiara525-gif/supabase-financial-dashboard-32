@@ -1,5 +1,13 @@
 import { adminClient, isE164, isTestMode, json, metaRequest, noContent, normalizePhone, phoneDigits, requirePinRole, requiredEnv, safeErrorMessage } from "../_shared/meta.ts";
 
+type TemplateCategory = "utility" | "marketing" | "authentication";
+
+function normalizeTemplateCategory(value: unknown, field: string): TemplateCategory {
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!["utility", "marketing", "authentication"].includes(normalized)) throw new Error(`${field} is invalid`);
+  return normalized as TemplateCategory;
+}
+
 function stringValue(value: unknown, field: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${field} is required`);
   return value.trim();
@@ -25,18 +33,25 @@ Deno.serve(async (request) => {
     const text = typeof body.message === "string" ? body.message.trim() : "";
     const templateName = typeof body.templateName === "string" ? body.templateName.trim() : "";
     const languageCode = typeof body.languageCode === "string" ? body.languageCode.trim() : "pt_BR";
+    const requestedTemplateCategory = templateName ? normalizeTemplateCategory(body.templateCategory || "utility", "templateCategory") : null;
     const dryRun = body.dryRun !== false || isTestMode();
     const idempotencyKey = stringValue(body.idempotencyKey || request.headers.get("x-idempotency-key"), "idempotencyKey");
+    const approvedTemplate = !dryRun && templateName ? await requireApprovedTemplate(templateName, languageCode) : null;
+    const effectiveTemplateCategory = templateName
+      ? approvedTemplate
+        ? normalizeTemplateCategory(approvedTemplate.category, "Meta template category")
+        : requestedTemplateCategory
+      : null;
 
     if (!isE164(to)) throw new Error("The destination must use international E.164 format");
     if (!text && !templateName) throw new Error("message or templateName is required");
     if (text.length > 4096) throw new Error("message exceeds the 4096 character limit");
 
     const supabase = adminClient();
-    const { data: contact, error: contactError } = await supabase.from("message_contacts").select("consent_status, subscription_status").eq("phone_e164", phoneDigits(to)).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: contact, error: contactError } = await supabase.from("message_contacts").select("consent_status, subscription_status, consent_category").eq("phone_e164", phoneDigits(to)).order("updated_at", { ascending: false }).limit(1).maybeSingle();
     if (contactError) throw contactError;
     if (!dryRun && (!contact || contact.consent_status !== "consented" || contact.subscription_status !== "active")) throw new Error("Recipient needs an active consent record before a real send");
-    if (!dryRun && templateName) await requireApprovedTemplate(templateName, languageCode);
+    if (!dryRun && templateName && contact && contact.consent_category && contact.consent_category !== "all" && contact.consent_category !== effectiveTemplateCategory) throw new Error("Template category is not covered by the recipient consent");
     if (!dryRun && !templateName) {
       const { data: conversation, error: conversationError } = await supabase.from("message_conversations").select("service_window_expires_at").eq("phone_e164", phoneDigits(to)).maybeSingle();
       if (conversationError) throw conversationError;
@@ -68,13 +83,13 @@ Deno.serve(async (request) => {
       body_preview: text.slice(0, 500),
       template_name: templateName || null,
       idempotency_key: idempotencyKey,
-      status: dryRun ? "simulada" : "pendente",
+      status: dryRun ? "simulada" : "pending",
       dry_run: dryRun,
     }).select("id, status, idempotency_key").single();
     if (insertError) throw insertError;
 
     if (dryRun) {
-      await supabase.from("message_audit_logs").insert({ actor_id: null, operator_key: session.operatorKey, action: "meta_message_dry_run", metadata: { outbox_id: messageRow.id, to: phoneDigits(to), template: templateName || null } });
+      await supabase.from("message_audit_logs").insert({ actor_id: null, operator_key: session.operatorKey, action: "meta_message_dry_run", metadata: { outbox_id: messageRow.id, to: phoneDigits(to), template: templateName || null, template_category: effectiveTemplateCategory } });
       return json(request, { ok: true, dryRun: true, message: messageRow, notice: "Dry run completed. No real message was sent." });
     }
 

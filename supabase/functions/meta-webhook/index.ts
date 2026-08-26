@@ -53,7 +53,19 @@ Deno.serve(async (request) => {
           const externalId = typeof status.id === "string" ? status.id : "";
           const providerStatus = typeof status.status === "string" ? status.status : "";
           if (!externalId || !providerStatus) continue;
-          await supabase.from("message_outbox").update({ status: normalizeMessageStatus(providerStatus), last_error: providerStatus === "failed" ? JSON.stringify(status.errors || []) : null, updated_at: new Date().toISOString() }).eq("external_id", externalId);
+          const statusTimestamp = new Date().toISOString();
+          const providerError = Array.isArray(status.errors) ? status.errors : [];
+          const statusUpdate: Record<string, unknown> = { status: normalizeMessageStatus(providerStatus), updated_at: statusTimestamp };
+          if (providerStatus === "accepted") statusUpdate.accepted_at = statusTimestamp;
+          if (providerStatus === "sent") statusUpdate.sent_at = statusTimestamp;
+          if (providerStatus === "delivered") statusUpdate.delivered_at = statusTimestamp;
+          if (providerStatus === "read") statusUpdate.read_at = statusTimestamp;
+          if (providerStatus === "failed") {
+            statusUpdate.last_error = JSON.stringify(providerError);
+            const firstError = providerError[0];
+            if (firstError && typeof firstError === "object" && typeof (firstError as Record<string, unknown>).code === "string") statusUpdate.provider_error_code = (firstError as Record<string, unknown>).code;
+          }
+          await supabase.from("message_outbox").update(statusUpdate).eq("external_id", externalId);
           const conversationStatus = providerStatus === "sent" ? "sent" : providerStatus === "delivered" ? "delivered" : providerStatus === "read" ? "read" : providerStatus === "failed" ? "failed" : "processing";
           await supabase.from("message_conversation_messages").update({ status: conversationStatus }).eq("external_id", externalId);
           await supabase.from("message_events").upsert({ external_id: externalId, event_type: providerStatus, normalized_status: normalizeMessageStatus(providerStatus), payload: status, event_hash: await sha256Hex(JSON.stringify(status)) }, { onConflict: "event_hash" });
