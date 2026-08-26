@@ -40,15 +40,36 @@ export function adminClient(): AdminClient {
   });
 }
 
-export async function requirePinSession(request: Request) {
+export type PinSessionContext = {
+  sessionHash: string;
+  expiresAt: string | null;
+  operatorKey: string;
+  operatorName: string;
+  role: "owner" | "admin" | "operator" | "viewer";
+};
+
+export async function requirePinSession(request: Request): Promise<PinSessionContext> {
   const sessionToken = request.headers.get("x-v4-pin-session")?.trim();
   if (!sessionToken) throw new Error("PIN session required");
 
   const sessionHash = await sha256Hex(sessionToken);
   const { data, error } = await adminClient().rpc("v4_pin_validate_session", { p_session_hash: sessionHash });
   const result = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
-  if (error || !result?.ok) throw new Error("PIN session expired");
-  return { sessionHash, expiresAt: typeof result.expires_at === "string" ? result.expires_at : null };
+  const role = result?.role;
+  if (error || !result?.ok || !result.operator_key || !["owner", "admin", "operator", "viewer"].includes(String(role))) throw new Error("PIN session expired");
+  return {
+    sessionHash,
+    expiresAt: typeof result.expires_at === "string" ? result.expires_at : null,
+    operatorKey: String(result.operator_key),
+    operatorName: typeof result.operator_name === "string" ? result.operator_name : "Operador V4",
+    role: role as PinSessionContext["role"],
+  };
+}
+
+export async function requirePinRole(request: Request, allowedRoles: PinSessionContext["role"][]): Promise<PinSessionContext> {
+  const session = await requirePinSession(request);
+  if (!allowedRoles.includes(session.role)) throw new Error("Insufficient operator permissions");
+  return session;
 }
 
 export async function requireUser(request: Request) {

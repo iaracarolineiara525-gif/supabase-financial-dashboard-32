@@ -1,4 +1,4 @@
-import { adminClient, isTestMode, json, metaRequest, noContent, requirePinSession, requiredEnv, safeErrorMessage } from "../_shared/meta.ts";
+import { adminClient, isTestMode, json, metaRequest, noContent, requiredEnv, requirePinRole, safeErrorMessage } from "../_shared/meta.ts";
 
 function requiredString(value: unknown, field: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${field} is required`);
@@ -29,7 +29,7 @@ Deno.serve(async (request) => {
   if (request.method !== "POST") return json(request, { ok: false, error: "Method not allowed" }, 405);
 
   try {
-    await requirePinSession(request);
+    const session = await requirePinRole(request, ["owner", "admin"]);
     const body = await request.json() as Record<string, unknown>;
     const payload = validateTemplate(body);
     const supabase = adminClient();
@@ -39,6 +39,7 @@ Deno.serve(async (request) => {
     if (dryRun) {
       await supabase.from("message_audit_logs").insert({
         actor_id: null,
+        operator_key: session.operatorKey,
         action: "meta_template_submission_dry_run",
         metadata: { name: payload.name, language: payload.language, category: payload.category },
       });
@@ -48,6 +49,7 @@ Deno.serve(async (request) => {
     const { data } = await metaRequest(`/${wabaId}/message_templates`, { method: "POST", body: JSON.stringify(payload) });
     await supabase.from("message_audit_logs").insert({
       actor_id: null,
+      operator_key: session.operatorKey,
       action: "meta_template_submitted",
       metadata: { name: payload.name, language: payload.language, category: payload.category, template_id: data.id || null },
     });

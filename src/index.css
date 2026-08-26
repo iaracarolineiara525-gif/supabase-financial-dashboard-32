@@ -119,11 +119,16 @@
   }
 
   html {
+    min-width: 320px;
+    min-height: 100%;
     background: hsl(var(--background));
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    min-width: 320px;
+    min-height: 100dvh;
+    overflow-x: hidden;
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
 

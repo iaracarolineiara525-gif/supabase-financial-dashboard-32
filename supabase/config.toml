@@ -23,3 +23,12 @@ verify_jwt = false
 
 [functions.message-contacts-import]
 verify_jwt = false
+
+[functions.message-inbox-list]
+verify_jwt = false
+
+[functions.message-inbox-reply]
+verify_jwt = false
+
+[functions.v4-operator-context]
+verify_jwt = false

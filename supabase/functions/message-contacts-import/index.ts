@@ -1,4 +1,4 @@
-import { adminClient, isE164, json, noContent, normalizePhone, phoneDigits, requirePinSession, safeErrorMessage } from "../_shared/meta.ts";
+import { adminClient, isE164, json, noContent, normalizePhone, phoneDigits, requirePinRole, safeErrorMessage } from "../_shared/meta.ts";
 
 const MAX_ROWS = 500;
 const MAX_NAME_LENGTH = 160;
@@ -58,7 +58,7 @@ Deno.serve(async (request) => {
   if (request.method !== "POST") return json(request, { ok: false, error: "Method not allowed" }, 405);
 
   try {
-    await requirePinSession(request);
+    const session = await requirePinRole(request, ["owner", "admin", "operator"]);
     const body = await request.json() as { rows?: ImportRow[]; source?: string };
     if (!Array.isArray(body.rows) || body.rows.length === 0) throw new Error("rows is required");
     if (body.rows.length > MAX_ROWS) throw new Error(`A batch can contain at most ${MAX_ROWS} rows`);
@@ -94,6 +94,7 @@ Deno.serve(async (request) => {
 
     await supabase.from("message_audit_logs").insert({
       actor_id: null,
+      operator_key: session.operatorKey,
       action: "message_contacts_imported",
       metadata: { received: body.rows.length, deduplicated: deduplicated.length, created, updated, blocked_by_suppression: blockedBySuppression, duplicate_rows: duplicateRows },
     });

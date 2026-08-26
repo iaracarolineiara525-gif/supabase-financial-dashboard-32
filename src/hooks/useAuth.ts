@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { clearPinSessionToken, getPinSessionToken, pinSessionHeaders, setPinSessionToken } from '@/lib/v4PinSession';
 
 type PinUser = { id: string; access: 'pin' };
+type Operator = { key: string; name: string; role: 'owner' | 'admin' | 'operator' | 'viewer' };
 
 type AuthError = { error: Error | null };
 
@@ -14,9 +15,21 @@ function responseError(data: unknown, fallback: string): Error {
 export function useAuth() {
   const [authenticated, setAuthenticated] = useState(() => Boolean(getPinSessionToken()));
   const [loading, setLoading] = useState(false);
+  const [operator, setOperator] = useState<Operator | null>(null);
 
   useEffect(() => {
-    const refresh = () => setAuthenticated(Boolean(getPinSessionToken()));
+    const refresh = () => {
+      const token = getPinSessionToken();
+      setAuthenticated(Boolean(token));
+      if (!token) {
+        setOperator(null);
+        return;
+      }
+      void supabase.functions.invoke('v4-operator-context', { body: {}, headers: pinSessionHeaders(token) }).then(({ data }) => {
+        if (data?.ok && data.operator) setOperator(data.operator as Operator);
+      });
+    };
+    refresh();
     window.addEventListener('storage', refresh);
     return () => window.removeEventListener('storage', refresh);
   }, []);
@@ -29,6 +42,7 @@ export function useAuth() {
         return { error: responseError(data, error?.message || 'PIN inválido.') };
       }
       setPinSessionToken(data.sessionToken);
+      setOperator(data.operator && typeof data.operator === 'object' ? data.operator as Operator : { key: 'primary', name: 'Operador principal V4', role: 'owner' });
       setAuthenticated(true);
       return { error: null };
     } finally {
@@ -39,6 +53,7 @@ export function useAuth() {
   const signOut = async (): Promise<AuthError> => {
     const token = getPinSessionToken();
     clearPinSessionToken();
+    setOperator(null);
     setAuthenticated(false);
     if (!token) return { error: null };
 
@@ -52,6 +67,7 @@ export function useAuth() {
   return {
     user: authenticated ? ({ id: 'pin-operator', access: 'pin' } satisfies PinUser) : null,
     session: authenticated ? { access: 'pin' as const } : null,
+    operator,
     loading,
     signIn,
     signOut,

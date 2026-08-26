@@ -11,8 +11,9 @@ Deno.serve(async (request) => {
 
     const supabase = adminClient();
     await supabase.from("message_audit_logs").insert({
-      actor_id: null,
-      action: "meta_connection_test",
+        actor_id: null,
+        operator_key: session.operatorKey,
+        action: "meta_connection_test",
       metadata: { test_mode: isTestMode(), phone_id: Deno.env.get("META_PHONE_NUMBER_ID"), success: true, session_expires_at: session.expiresAt },
     });
 
@@ -28,6 +29,7 @@ Deno.serve(async (request) => {
     try {
       await adminClient().from("message_audit_logs").insert({
         actor_id: null,
+        operator_key: "unknown",
         action: "meta_connection_test_failed",
         metadata: { test_mode: isTestMode(), error: safeMessage },
       });

@@ -49,11 +49,12 @@ Deno.serve(async (request) => {
 
     await adminClient().from("message_audit_logs").insert({
       actor_id: null,
+      operator_key: "primary",
       action: "v4_pin_login_success",
       metadata: { fingerprint, expires_at: expiresAt },
     });
 
-    return json(request, { ok: true, sessionToken, expiresAt });
+    return json(request, { ok: true, sessionToken, expiresAt, operator: { key: "primary", name: "Operador principal V4", role: "owner" } });
   } catch {
     return json(request, { ok: false, error: "Não foi possível validar o acesso agora." }, 500);
   }

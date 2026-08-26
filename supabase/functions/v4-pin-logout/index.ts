@@ -7,6 +7,7 @@ Deno.serve(async (request) => {
   const sessionToken = request.headers.get("x-v4-pin-session")?.trim();
   if (sessionToken) {
     await adminClient().rpc("v4_pin_revoke_session", { p_session_hash: await sha256Hex(sessionToken) });
+    await adminClient().from("message_audit_logs").insert({ actor_id: null, operator_key: "primary", action: "v4_pin_logout", metadata: {} });
   }
   return json(request, { ok: true });
 });
