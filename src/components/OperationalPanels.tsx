@@ -69,7 +69,7 @@ const healthRows = [
 ];
 
 export function AccountHealthPanel() {
-  const [health, setHealth] = useState<{ ok: boolean; testMode?: boolean; phone?: Record<string, unknown>; account?: Record<string, unknown> } | null>(null);
+  const [health, setHealth] = useState<{ ok: boolean; testMode?: boolean; phone?: Record<string, unknown> | null; account?: Record<string, unknown> | null; checks?: { phone?: boolean; account?: boolean; credentials?: boolean }; errors?: string[]; error?: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -77,30 +77,33 @@ export function AccountHealthPanel() {
     setIsLoading(true);
     const { data, error } = await supabase.functions.invoke("meta-health", { body: {}, headers: pinSessionHeaders() });
     setIsLoading(false);
-    if (error || !data?.ok) {
-      setHealth(null);
+    if (error && !data) {
+      setHealth({ ok: false, errors: [error.message || "Falha ao consultar a função de saúde"] });
       setLoadError(true);
       return;
     }
-    setLoadError(false);
-    setHealth(data as { ok: boolean; testMode?: boolean; phone?: Record<string, unknown>; account?: Record<string, unknown> });
+    const diagnostic = data as { ok: boolean; testMode?: boolean; phone?: Record<string, unknown> | null; account?: Record<string, unknown> | null; checks?: { phone?: boolean; account?: boolean; credentials?: boolean }; errors?: string[]; error?: string };
+    setLoadError(!diagnostic?.ok);
+    setHealth(diagnostic);
   };
 
   useEffect(() => { void loadHealth(); }, []);
 
   const phoneName = typeof health?.phone?.verified_name === "string" ? health.phone.verified_name : "Número sandbox";
   const phoneQuality = typeof health?.phone?.quality_rating === "string" ? health.phone.quality_rating : "UNKNOWN";
+  const phoneStatus = typeof health?.phone?.status === "string" ? health.phone.status : "Revisar";
+  const accountName = typeof health?.account?.name === "string" ? health.account.name : "WABA não confirmada";
   const healthRows = [
-    { label: "Conexão com a Meta", value: isLoading ? "Validando…" : health ? "OK" : "Revisar", icon: Activity, tone: health ? "success" : "warning" },
-    { label: "Número conectado", value: isLoading ? "—" : phoneName, icon: Smartphone, tone: health ? "success" : "warning" },
+    { label: "Conexão com a Meta", value: isLoading ? "Validando…" : health?.checks?.credentials ? "OK" : "Revisar", icon: Activity, tone: health?.checks?.credentials ? "success" : "warning" },
+    { label: "Número conectado", value: isLoading ? "—" : phoneName, icon: Smartphone, tone: health?.checks?.phone ? "success" : "warning" },
+    { label: "Status do número", value: isLoading ? "—" : phoneStatus, icon: ShieldCheck, tone: phoneStatus === "CONNECTED" ? "success" : "warning" },
     { label: "Qualidade do número", value: phoneQuality, icon: ShieldCheck, tone: phoneQuality === "GREEN" ? "success" : "warning" },
-    { label: "Webhook de status", value: "Monitorado", icon: Activity, tone: "success" },
-    { label: "Templates dependentes", value: "Verificar", icon: Clock3, tone: "warning" },
+    { label: "Conta WhatsApp", value: isLoading ? "—" : accountName, icon: Activity, tone: health?.checks?.account ? "success" : "warning" },
   ];
 
   return (
     <div className="grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
-      <Card className="glass-card rounded-[1.25rem]"><CardHeader className="p-4 pb-3 sm:p-5 sm:pb-3"><div className="flex items-start justify-between gap-3"><div><CardDescription className="text-[10px] font-semibold uppercase tracking-[0.18em]">Prevenção operacional</CardDescription><CardTitle className="mt-1 text-xl tracking-[-0.04em]">Saúde da conta</CardTitle><p className="mt-1 text-xs leading-5 text-muted-foreground">Acompanhe qualidade, webhooks, limites e sinais de risco antes do próximo envio.</p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary"><ShieldCheck className="h-6 w-6" /></div></div></CardHeader><CardContent className="space-y-3 p-4 pt-1 sm:p-5 sm:pt-1">{loadError && <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-700 dark:text-amber-300">A consulta da Meta não foi concluída. Nenhuma mensagem foi enviada; tente novamente após revisar Canais e API.</div>}{healthRows.map((row) => <div key={row.label} className="flex items-center gap-3 rounded-xl border border-border/50 p-3"><row.icon className={cn("h-4 w-4", row.tone === "success" ? "text-primary" : "text-amber-500")} /><span className="min-w-0 flex-1 text-sm">{row.label}</span><span className={cn("max-w-[11rem] truncate text-right text-[11px] font-semibold", row.tone === "success" ? "text-primary" : "text-amber-600 dark:text-amber-300")}>{row.value}</span></div>)}<Button variant="outline" className="w-full rounded-xl bg-transparent" onClick={() => void loadHealth()} disabled={isLoading}><RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} /> {isLoading ? "Validando conexão" : "Atualizar diagnóstico"}</Button></CardContent></Card>
+      <Card className="glass-card rounded-[1.25rem]"><CardHeader className="p-4 pb-3 sm:p-5 sm:pb-3"><div className="flex items-start justify-between gap-3"><div><CardDescription className="text-[10px] font-semibold uppercase tracking-[0.18em]">Prevenção operacional</CardDescription><CardTitle className="mt-1 text-xl tracking-[-0.04em]">Saúde da conta</CardTitle><p className="mt-1 text-xs leading-5 text-muted-foreground">Acompanhe qualidade, webhooks, limites e sinais de risco antes do próximo envio.</p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary"><ShieldCheck className="h-6 w-6" /></div></div></CardHeader><CardContent className="space-y-3 p-4 pt-1 sm:p-5 sm:pt-1">{loadError && <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-700 dark:text-amber-300"><p className="font-semibold">Diagnóstico precisa de revisão</p><p className="mt-1">Nenhuma mensagem foi enviada. Verifique Canais e API e confira os retornos abaixo.</p>{health?.errors?.length ? <div className="mt-2 space-y-1 font-mono text-[10px]">{health.errors.map((error) => <p key={error}>{error}</p>)}</div> : null}</div>}{healthRows.map((row) => <div key={row.label} className="flex items-center gap-3 rounded-xl border border-border/50 p-3"><row.icon className={cn("h-4 w-4", row.tone === "success" ? "text-primary" : "text-amber-500")} /><span className="min-w-0 flex-1 text-sm">{row.label}</span><span className={cn("max-w-[11rem] truncate text-right text-[11px] font-semibold", row.tone === "success" ? "text-primary" : "text-amber-600 dark:text-amber-300")}>{row.value}</span></div>)}<Button variant="outline" className="w-full rounded-xl bg-transparent" onClick={() => void loadHealth()} disabled={isLoading}><RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} /> {isLoading ? "Validando conexão" : "Atualizar diagnóstico"}</Button></CardContent></Card>
       <div className="space-y-3"><Card className="glass-card rounded-[1.25rem]"><CardHeader className="p-4 pb-2"><CardTitle className="text-lg">Limite de mensagens</CardTitle><CardDescription>Consumo estimado do período móvel atual.</CardDescription></CardHeader><CardContent className="p-4 pt-1"><div className="flex items-end justify-between gap-3"><div><p className="text-3xl font-semibold tracking-[-0.06em]">38%</p><p className="text-xs text-muted-foreground">1.520 de 4.000 usuários únicos</p></div><GaugeIcon /></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full w-[38%] rounded-full bg-primary" /></div><p className="mt-3 text-[11px] leading-5 text-muted-foreground">O limite é compartilhado no nível do portfólio empresarial e não representa apenas mensagens entregues.</p></CardContent></Card><Card className="glass-card rounded-[1.25rem] border-amber-500/20"><CardContent className="flex items-start gap-3 p-4"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" /><div><p className="text-sm font-semibold">Atenção antes de publicar</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Um template em análise e 18 falhas recentes precisam de revisão. O V4 manterá a campanha em dry run até a homologação.</p></div></CardContent></Card></div>
     </div>
   );
