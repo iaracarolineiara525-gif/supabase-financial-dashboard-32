@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Component, ErrorInfo, ReactNode, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,26 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { pinSessionHeaders } from "@/lib/v4PinSession";
 import { Activity, AlertTriangle, BarChart3, CheckCircle2, ChevronRight, Clock3, FileText, Gauge, History, LockKeyhole, Pause, RefreshCw, Settings2, ShieldCheck, Smartphone, Users, XCircle } from "lucide-react";
+
+type HealthBoundaryProps = { children: ReactNode };
+type HealthBoundaryState = { hasError: boolean };
+
+class HealthBoundary extends Component<HealthBoundaryProps, HealthBoundaryState> {
+  state: HealthBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): HealthBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("V4 account health panel render error", error, info.componentStack);
+  }
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+    return <Card className="glass-card rounded-[1.25rem]"><CardHeader className="p-4 sm:p-5"><CardTitle className="text-xl">Saúde da conta indisponível</CardTitle><CardDescription>O painel encontrou uma falha ao montar os dados. Nenhuma mensagem foi enviada.</CardDescription></CardHeader><CardContent className="p-4 pt-0 sm:p-5 sm:pt-0"><Button variant="outline" className="rounded-xl bg-transparent" onClick={() => this.setState({ hasError: false })}><RefreshCw className="mr-2 h-4 w-4" /> Tentar novamente</Button></CardContent></Card>;
+  }
+}
 
 const queueItems = [
   { id: "msg_8f2…91c", phone: "+55 11 998••1180", campaign: "Reativação — clientes sem compra", template: "v4_reativacao_cliente", requested: "Hoje, 09:42", status: "Entregue", detail: "Lida às 09:44", tone: "success" },
@@ -68,7 +88,7 @@ const healthRows = [
   { label: "Falhas nas últimas 24h", value: "18 para revisar", icon: AlertTriangle, tone: "warning" },
 ];
 
-export function AccountHealthPanel() {
+function AccountHealthContent() {
   const [health, setHealth] = useState<{ ok: boolean; testMode?: boolean; phone?: Record<string, unknown> | null; account?: Record<string, unknown> | null; checks?: { phone?: boolean; account?: boolean; credentials?: boolean }; errors?: string[]; error?: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -107,6 +127,10 @@ export function AccountHealthPanel() {
       <div className="space-y-3"><Card className="glass-card rounded-[1.25rem]"><CardHeader className="p-4 pb-2"><CardTitle className="text-lg">Limite de mensagens</CardTitle><CardDescription>Consumo estimado do período móvel atual.</CardDescription></CardHeader><CardContent className="p-4 pt-1"><div className="flex items-end justify-between gap-3"><div><p className="text-3xl font-semibold tracking-[-0.06em]">38%</p><p className="text-xs text-muted-foreground">1.520 de 4.000 usuários únicos</p></div><GaugeIcon /></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full w-[38%] rounded-full bg-primary" /></div><p className="mt-3 text-[11px] leading-5 text-muted-foreground">O limite é compartilhado no nível do portfólio empresarial e não representa apenas mensagens entregues.</p></CardContent></Card><Card className="glass-card rounded-[1.25rem] border-amber-500/20"><CardContent className="flex items-start gap-3 p-4"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" /><div><p className="text-sm font-semibold">Atenção antes de publicar</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Um template em análise e 18 falhas recentes precisam de revisão. O V4 manterá a campanha em dry run até a homologação.</p></div></CardContent></Card></div>
     </div>
   );
+}
+
+export function AccountHealthPanel() {
+  return <HealthBoundary><AccountHealthContent /></HealthBoundary>;
 }
 
 function GaugeIcon() {
