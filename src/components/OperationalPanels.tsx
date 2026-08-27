@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { pinSessionHeaders } from "@/lib/v4PinSession";
-import { Activity, AlertTriangle, BarChart3, CheckCircle2, ChevronRight, Clock3, FileText, History, LockKeyhole, Pause, RefreshCw, Settings2, ShieldCheck, Smartphone, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, CheckCircle2, ChevronRight, Clock3, FileText, Gauge, History, LockKeyhole, Pause, RefreshCw, Settings2, ShieldCheck, Smartphone, Users, XCircle } from "lucide-react";
 
 const queueItems = [
   { id: "msg_8f2…91c", phone: "+55 11 998••1180", campaign: "Reativação — clientes sem compra", template: "v4_reativacao_cliente", requested: "Hoje, 09:42", status: "Entregue", detail: "Lida às 09:44", tone: "success" },
