@@ -30,6 +30,12 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Prepare GitHub Pages metadata
+        run: |
+          cp CNAME dist/CNAME
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:

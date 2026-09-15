@@ -1,4 +1,5 @@
 import { adminClient, hmacSha256Hex, json, noContent, normalizeMessageStatus, requiredEnv, safeErrorMessage, sha256Hex } from "../_shared/meta.ts";
+import { downloadMetaMediaToStorage } from "../_shared/media.ts";
 
 function timingSafeEqual(left: string, right: string): boolean {
   if (left.length !== right.length) return false;
@@ -48,6 +49,10 @@ Deno.serve(async (request) => {
         const statuses = Array.isArray(value.statuses) ? value.statuses as Array<Record<string, unknown>> : [];
         const inboundMessages = Array.isArray(value.messages) ? value.messages as Array<Record<string, unknown>> : [];
         const contacts = Array.isArray(value.contacts) ? value.contacts as Array<Record<string, unknown>> : [];
+        const { data: savedContacts, error: savedContactsError } = inboundMessages.length > 0
+          ? await supabase.from("message_contacts").select("id, full_name, phone_e164").order("updated_at", { ascending: false }).limit(2000)
+          : { data: [], error: null };
+        if (savedContactsError) throw savedContactsError;
 
         for (const status of statuses) {
           const externalId = typeof status.id === "string" ? status.id : "";
@@ -79,15 +84,25 @@ Deno.serve(async (request) => {
           const allowedTypes = new Set(["text", "image", "video", "audio", "document", "interactive"]);
           const messageType = allowedTypes.has(typeValue) ? typeValue : "unknown";
           const textPayload = inbound.text && typeof inbound.text === "object" ? inbound.text as Record<string, unknown> : null;
-          const body = typeof textPayload?.body === "string" ? textPayload.body : null;
+          const mediaPayload = (messageType === "audio" || messageType === "video") && inbound[messageType] && typeof inbound[messageType] === "object"
+            ? inbound[messageType] as Record<string, unknown>
+            : null;
+          const mediaId = typeof mediaPayload?.id === "string" ? mediaPayload.id : null;
+          const mediaMimeType = typeof mediaPayload?.mime_type === "string" ? mediaPayload.mime_type : null;
+          const mediaSha256 = typeof mediaPayload?.sha256 === "string" ? mediaPayload.sha256 : null;
+          const mediaCaption = typeof mediaPayload?.caption === "string" ? mediaPayload.caption : null;
+          const isVoiceNote = mediaPayload?.voice === true;
+          const body = typeof textPayload?.body === "string" ? textPayload.body : mediaCaption || (mediaId ? `[${isVoiceNote ? "áudio de voz" : messageType}]` : null);
           const contact = contacts.find((item) => item.wa_id === senderDigits);
           const profile = contact?.profile && typeof contact.profile === "object" ? contact.profile as Record<string, unknown> : null;
-          const contactName = typeof profile?.name === "string" ? profile.name : null;
+          const profileName = typeof profile?.name === "string" ? profile.name : null;
+          const savedContact = ((savedContacts || []) as Array<{ id: string; full_name: string; phone_e164: string }>).find((item) => item.phone_e164.replace(/\D/g, "") === senderDigits);
+          const contactName = savedContact?.full_name || profileName;
           const timestampSeconds = typeof inbound.timestamp === "string" || typeof inbound.timestamp === "number" ? Number(inbound.timestamp) : NaN;
           const providerTimestamp = Number.isFinite(timestampSeconds) ? new Date(timestampSeconds * 1000).toISOString() : null;
           const serviceWindowBase = providerTimestamp ? new Date(providerTimestamp).getTime() : Date.now();
           const serviceWindowExpiresAt = new Date(serviceWindowBase + 24 * 60 * 60 * 1000).toISOString();
-          const { error: inboundError } = await supabase.rpc("v4_record_inbound_message", {
+          const { data: inboundResult, error: inboundError } = await supabase.rpc("v4_record_inbound_message", {
             p_phone_e164: `+${senderDigits}`,
             p_contact_name: contactName,
             p_external_id: externalId,
@@ -98,6 +113,38 @@ Deno.serve(async (request) => {
             p_raw_payload: inbound,
           });
           if (inboundError) throw inboundError;
+
+          const result = (Array.isArray(inboundResult) ? inboundResult[0] : inboundResult) as Record<string, unknown> | null;
+          const conversationId = typeof result?.conversation_id === "string" ? result.conversation_id : null;
+          const isDuplicate = result?.duplicate === true;
+          if (conversationId && savedContact) {
+            await supabase.from("message_conversations").update({ contact_id: savedContact.id, contact_name: savedContact.full_name, updated_at: new Date().toISOString() }).eq("id", conversationId);
+          }
+
+          if (mediaId && conversationId && !isDuplicate) {
+            const mediaUpdate: Record<string, unknown> = {
+              media_id: mediaId,
+              media_mime_type: mediaMimeType,
+              media_sha256: mediaSha256,
+              media_caption: mediaCaption,
+              processing_status: "stored",
+            };
+            try {
+              const stored = await downloadMetaMediaToStorage(supabase, {
+                mediaId,
+                conversationId,
+                messageKey: externalId.replace(/[^A-Za-z0-9_-]/g, "_"),
+                fallbackMime: mediaMimeType,
+              });
+              mediaUpdate.media_storage_path = stored.storagePath;
+              mediaUpdate.media_mime_type = stored.mimeType;
+              if (!mediaSha256) mediaUpdate.media_sha256 = stored.sha256;
+            } catch (mediaError) {
+              mediaUpdate.processing_status = "media_download_failed";
+              console.error("media_download_failed", safeErrorMessage(mediaError));
+            }
+            await supabase.from("message_conversation_messages").update(mediaUpdate).eq("external_id", externalId);
+          }
         }
       }
     }

@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import logoMeta from "@/assets/logo-meta-distribuidora.png";
 import { supabase } from "@/integrations/supabase/client";
 import { pinSessionHeaders } from "@/lib/v4PinSession";
+import { acceptAttribute, uploadMedia, type MediaKind } from "@/lib/whatsappMedia";
 import {
   Activity,
   AlertTriangle,
@@ -254,7 +255,7 @@ type MetaTemplate = {
   category?: string;
   status?: string;
   quality_score?: string | { score?: string };
-  components?: Array<{ type?: string; text?: string }>;
+  components?: Array<{ type?: string; format?: string; text?: string; example?: { header_handle?: string[] } }>;
 };
 
 function MetaTemplateStatus({ status }: { status?: string }) {
@@ -282,6 +283,13 @@ function MetaTemplatesPanel() {
   const [templateCategory, setTemplateCategory] = useState("utility");
   const [templateBody, setTemplateBody] = useState("Olá, {{1}}! Temos uma novidade especial para você.");
   const [templateExample, setTemplateExample] = useState("Mariana");
+  const [templateFooter, setTemplateFooter] = useState("Responda SAIR para não receber mais promoções.");
+  const [quickReply, setQuickReply] = useState("");
+  const [headerType, setHeaderType] = useState<"none" | "text" | "image" | "video" | "document">("none");
+  const [headerText, setHeaderText] = useState("");
+  const [headerFile, setHeaderFile] = useState<File | null>(null);
+  const [headerProgress, setHeaderProgress] = useState(0);
+  const [headerError, setHeaderError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const loadTemplates = async (notify = false) => {
@@ -306,21 +314,53 @@ function MetaTemplatesPanel() {
       toast({ title: "Complete o template", description: "Informe nome, corpo e exemplo da variável.", variant: "destructive" });
       return;
     }
+    if (headerType === "text" && !headerText.trim()) {
+      toast({ title: "Cabeçalho incompleto", description: "Escreva o texto do cabeçalho.", variant: "destructive" });
+      return;
+    }
+    if (["image", "video", "document"].includes(headerType) && !headerFile) {
+      toast({ title: "Cabeçalho incompleto", description: "Selecione o arquivo de exemplo do cabeçalho.", variant: "destructive" });
+      return;
+    }
     const confirmed = window.confirm("Enviar este template para análise da Meta? A Meta fará a aprovação; o V4 não marca templates como aprovados localmente.");
     if (!confirmed) return;
 
     setIsSubmitting(true);
+    setHeaderError(null);
+    const components: Array<Record<string, unknown>> = [];
+    if (headerType === "text") {
+      components.push({ type: "HEADER", format: "TEXT", text: headerText.trim() });
+    } else if (headerFile && headerType !== "none") {
+      try {
+        const upload = await uploadMedia({ file: headerFile, kind: headerType as MediaKind, target: "template", onProgress: setHeaderProgress });
+        if (upload.codecWarning) toast({ title: "Atenção com o arquivo", description: upload.codecWarning });
+        if (!upload.handle && !upload.dryRun) throw new Error("A Meta não devolveu o identificador do arquivo de exemplo.");
+        components.push({ type: "HEADER", format: headerType.toUpperCase(), example: { header_handle: [upload.handle || "dry-run"] } });
+      } catch (uploadError) {
+        setIsSubmitting(false);
+        setHeaderProgress(0);
+        const description = uploadError instanceof Error ? uploadError.message : "Falha no envio do arquivo.";
+        setHeaderError(description);
+        toast({ title: "Arquivo do cabeçalho não enviado", description, variant: "destructive" });
+        return;
+      }
+    }
+    components.push({ type: "BODY", text: templateBody.trim(), example: { body_text: [[templateExample.trim()]] } });
+    if (templateFooter.trim()) components.push({ type: "FOOTER", text: templateFooter.trim() });
+    if (quickReply.trim()) components.push({ type: "BUTTONS", buttons: [{ type: "QUICK_REPLY", text: quickReply.trim() }] });
+
     const { data, error } = await supabase.functions.invoke("meta-templates-create", {
       body: {
         name: templateName.trim().toLowerCase(),
         language: templateLanguage,
         category: templateCategory,
         parameter_format: "positional",
-        components: [{ type: "BODY", text: templateBody.trim(), example: { body_text: [[templateExample.trim()]] } }],
+        components,
       },
       headers: pinSessionHeaders(),
     });
     setIsSubmitting(false);
+    setHeaderProgress(0);
     if (error || !data?.ok) {
       toast({ title: "Template não enviado", description: data?.error || error?.message || "A Meta recusou a solicitação.", variant: "destructive" });
       return;
@@ -350,8 +390,19 @@ function MetaTemplatesPanel() {
           <div className="space-y-1.5"><label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Categoria Meta</label><select value={templateCategory} onChange={(event) => setTemplateCategory(event.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground"><option value="utility">Utilidade</option><option value="marketing">Marketing</option><option value="authentication">Autenticação</option></select></div>
           <div className="space-y-1.5"><div className="flex items-center justify-between"><label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Corpo</label><span className="text-[10px] text-muted-foreground">{templateBody.length}/1024</span></div><Textarea value={templateBody} onChange={(event) => setTemplateBody(event.target.value)} className="min-h-20 resize-none rounded-lg text-sm" maxLength={1024} /><p className="text-[11px] text-muted-foreground">Use variáveis posicionais como <code className="rounded bg-secondary px-1">{"{{1}}"}</code>.</p></div>
           <div className="space-y-1.5"><label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Exemplo da variável</label><Input value={templateExample} onChange={(event) => setTemplateExample(event.target.value)} className="h-9 rounded-lg text-sm" placeholder="Mariana" /></div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Cabeçalho</label>
+            <select value={headerType} onChange={(event) => { setHeaderType(event.target.value as typeof headerType); setHeaderFile(null); setHeaderError(null); setHeaderProgress(0); }} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground">
+              <option value="none">Sem cabeçalho</option><option value="text">Texto</option><option value="image">Imagem</option><option value="video">Vídeo</option><option value="document">Documento</option>
+            </select>
+            {headerType === "text" && <Input value={headerText} onChange={(event) => setHeaderText(event.target.value)} maxLength={60} className="h-9 rounded-lg text-sm" placeholder="Novidade da semana" />}
+            {["image", "video", "document"].includes(headerType) && <div className="space-y-1.5"><input type="file" accept={acceptAttribute(headerType as MediaKind)} onChange={(event) => { setHeaderFile(event.target.files?.[0] || null); setHeaderError(null); }} className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground" />{headerProgress > 0 && headerProgress < 100 && <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-all" style={{ width: `${headerProgress}%` }} /></div>}{headerError && <p className="text-[11px] text-destructive">{headerError}</p>}</div>}
+            <p className="text-[11px] text-muted-foreground">A Meta aceita texto, imagem, vídeo ou documento no cabeçalho; áudio não é permitido.</p>
+          </div>
+          <div className="space-y-1.5"><label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Rodapé</label><Input value={templateFooter} onChange={(event) => setTemplateFooter(event.target.value)} maxLength={60} className="h-9 rounded-lg text-sm" /></div>
+          <div className="space-y-1.5"><label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Botão de resposta rápida</label><Input value={quickReply} onChange={(event) => setQuickReply(event.target.value)} maxLength={25} className="h-9 rounded-lg text-sm" placeholder="VER CONDIÇÕES" /></div>
           <Button onClick={() => void handleSubmit()} disabled={isSubmitting} className="w-full rounded-lg">{isSubmitting ? "Enviando..." : "Enviar para análise da Meta"}</Button>
-          <p className="text-[10px] leading-4 text-muted-foreground">O status só muda após a análise da Meta. No modo Sandbox atual, a submissão fica em prévia e não altera a conta.</p>
+          <p className="text-[10px] leading-4 text-muted-foreground">O status só muda após a análise da Meta. Em produção, o envio vai para a análise oficial do WhatsApp.</p>
         </div>
         <div className="min-w-0 rounded-xl border border-border/60 p-4">
           {loadError && <div className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-700 dark:text-amber-300">{loadError}</div>}

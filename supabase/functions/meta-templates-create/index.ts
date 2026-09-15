@@ -19,6 +19,21 @@ function validateTemplate(body: Record<string, unknown>) {
   if (!Array.isArray(components) || components.length === 0 || components.length > 10) throw new Error("components must contain between 1 and 10 items");
   if (components.some((component) => !component || typeof component !== "object" || typeof (component as Record<string, unknown>).type !== "string")) throw new Error("each component needs a type");
 
+  const headers = (components as Array<Record<string, unknown>>).filter((component) => String(component.type).toUpperCase() === "HEADER");
+  if (headers.length > 1) throw new Error("o template aceita apenas um cabeçalho");
+  for (const header of headers) {
+    const format = String(header.format || "TEXT").toUpperCase();
+    if (format === "AUDIO") throw new Error("A Meta não suporta áudio como cabeçalho de template.");
+    if (!["TEXT", "IMAGE", "VIDEO", "DOCUMENT"].includes(format)) throw new Error("header format must be TEXT, IMAGE, VIDEO or DOCUMENT");
+    if (format === "TEXT") {
+      if (typeof header.text !== "string" || !header.text.trim() || header.text.length > 60) throw new Error("header text is required and limited to 60 characters");
+    } else {
+      const example = header.example as Record<string, unknown> | undefined;
+      const handles = example?.header_handle;
+      if (!Array.isArray(handles) || typeof handles[0] !== "string" || !handles[0].trim()) throw new Error("header media requires example.header_handle from the media upload");
+    }
+  }
+
   const payload = { name, language, category, parameter_format: parameterFormat, components };
   if (JSON.stringify(payload).length > 25000) throw new Error("template payload is too large");
   return payload;
