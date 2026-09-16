@@ -2,12 +2,27 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.52.0";
 
 export type AdminClient = ReturnType<typeof createClient>;
 
-const DEFAULT_ORIGIN = "https://crm.v4venturini.com";
+const DEFAULT_ORIGIN = "https://disparo.v4venturini.com";
+const EXTRA_ALLOWED_HOSTS = ["disparo.v4venturini.com"];
+
+function isAllowedOrigin(origin: string, configuredOrigin: string): boolean {
+  if (origin === configuredOrigin || origin === DEFAULT_ORIGIN) return true;
+  try {
+    const url = new URL(origin);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return true;
+    if (url.protocol === "https:" && EXTRA_ALLOWED_HOSTS.includes(url.hostname)) return true;
+    if (url.protocol === "https:" && (url.hostname.endsWith(".lovable.app") || url.hostname.endsWith(".lovableproject.com"))) return true;
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 
 export function corsHeaders(request: Request): Record<string, string> {
   const configuredOrigin = Deno.env.get("APP_ORIGIN") || DEFAULT_ORIGIN;
   const requestOrigin = request.headers.get("origin");
-  const allowOrigin = requestOrigin && requestOrigin === configuredOrigin ? requestOrigin : configuredOrigin;
+  const allowOrigin = requestOrigin && isAllowedOrigin(requestOrigin, configuredOrigin) ? requestOrigin : configuredOrigin;
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
@@ -134,7 +149,9 @@ export function safeErrorMessage(error: unknown): string {
 }
 
 export function isTestMode(): boolean {
-  return (Deno.env.get("META_TEST_MODE") || "true").toLowerCase() !== "false";
+  // Production is the safe default for the real BM. Enable dry-run explicitly
+  // with META_TEST_MODE=true when validating without sending to WhatsApp.
+  return (Deno.env.get("META_TEST_MODE") || "false").toLowerCase() === "true";
 }
 
 export function normalizePhone(input: string): string {

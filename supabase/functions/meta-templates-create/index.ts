@@ -19,6 +19,7 @@ function validateTemplate(body: Record<string, unknown>) {
   if (!Array.isArray(components) || components.length === 0 || components.length > 10) throw new Error("components must contain between 1 and 10 items");
   if (components.some((component) => !component || typeof component !== "object" || typeof (component as Record<string, unknown>).type !== "string")) throw new Error("each component needs a type");
 
+  // Cabeçalho: a Meta aceita TEXT, IMAGE, VIDEO e DOCUMENT (áudio não é suportado em template).
   const headers = (components as Array<Record<string, unknown>>).filter((component) => String(component.type).toUpperCase() === "HEADER");
   if (headers.length > 1) throw new Error("o template aceita apenas um cabeçalho");
   for (const header of headers) {
@@ -30,7 +31,9 @@ function validateTemplate(body: Record<string, unknown>) {
     } else {
       const example = header.example as Record<string, unknown> | undefined;
       const handles = example?.header_handle;
-      if (!Array.isArray(handles) || typeof handles[0] !== "string" || !handles[0].trim()) throw new Error("header media requires example.header_handle from the media upload");
+      if (!Array.isArray(handles) || handles.length === 0 || typeof handles[0] !== "string" || !handles[0].trim()) {
+        throw new Error("header media requires example.header_handle from the media upload");
+      }
     }
   }
 

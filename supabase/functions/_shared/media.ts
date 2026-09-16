@@ -1,4 +1,5 @@
-// Helpers for WhatsApp Cloud API media. Tokens stay server-side.
+// Helpers de mídia para a integração oficial WhatsApp Cloud API.
+// Todo upload/download acontece somente no backend: o token nunca sai daqui.
 import { AdminClient, graphBaseUrl, graphVersion, requiredEnv, sha256Hex } from "./meta.ts";
 
 export const MEDIA_BUCKET = "whatsapp-media";
@@ -15,9 +16,19 @@ export const AUDIO_MIME_TYPES = [
   "audio/ogg",
   "audio/ogg; codecs=opus",
 ];
+
 export const VIDEO_MIME_TYPES = ["video/mp4", "video/3gp", "video/3gpp"];
 export const IMAGE_MIME_TYPES = ["image/jpeg", "image/png"];
-export const DOCUMENT_MIME_TYPES = ["application/pdf"];
+export const DOCUMENT_MIME_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+];
 
 export type MediaKind = "audio" | "video" | "image" | "document";
 
@@ -35,13 +46,14 @@ export function allowedMimeTypes(kind: MediaKind): string[] {
 export function validateMedia(kind: MediaKind, mimeType: string, byteLength: number): string {
   const normalized = baseMime(mimeType || "");
   if (!normalized) throw new Error("Tipo do arquivo não identificado.");
-  if (!allowedMimeTypes(kind).map(baseMime).includes(normalized)) {
+  const allowed = allowedMimeTypes(kind).map(baseMime);
+  if (!allowed.includes(normalized)) {
     throw new Error(
       kind === "video"
-        ? "Vídeo inválido. Use MP4 ou 3GP com vídeo H.264 e áudio AAC."
+        ? "Vídeo inválido. A Meta aceita apenas MP4 ou 3GP com vídeo H.264 e áudio AAC."
         : kind === "audio"
-          ? "Áudio inválido. Use AAC, MP4/M4A, MP3, AMR ou OGG/Opus."
-          : `Tipo de arquivo não suportado para ${kind}.`,
+        ? "Áudio inválido. A Meta aceita AAC, MP4/M4A, MPEG/MP3, AMR e OGG/Opus."
+        : `Tipo de arquivo não suportado para ${kind}.`,
     );
   }
   if (byteLength <= 0) throw new Error("Arquivo vazio.");
@@ -49,6 +61,10 @@ export function validateMedia(kind: MediaKind, mimeType: string, byteLength: num
   return normalized;
 }
 
+/**
+ * Checagem best-effort dos codecs de MP4: procura as marcas 'avc1'/'H264' e 'mp4a' (AAC)
+ * nos primeiros KB do arquivo. Retorna null quando não é possível concluir.
+ */
 export function inspectMp4Codecs(bytes: Uint8Array): { h264: boolean; aac: boolean } | null {
   const slice = bytes.subarray(0, Math.min(bytes.length, 512 * 1024));
   let text = "";
@@ -57,6 +73,7 @@ export function inspectMp4Codecs(bytes: Uint8Array): { h264: boolean; aac: boole
   return { h264: text.includes("avc1") || text.includes("avc3") || text.includes("H264"), aac: text.includes("mp4a") };
 }
 
+/** Faz upload para POST /{PHONE_NUMBER_ID}/media e devolve o media ID reutilizável. */
 export async function uploadMediaToMeta(bytes: Uint8Array, mimeType: string, fileName: string): Promise<string> {
   const token = requiredEnv("META_ACCESS_TOKEN");
   const phoneNumberId = requiredEnv("META_PHONE_NUMBER_ID");
@@ -80,16 +97,20 @@ export async function uploadMediaToMeta(bytes: Uint8Array, mimeType: string, fil
   return data.id;
 }
 
+/**
+ * Resumable Upload API: devolve o header_handle exigido no exemplo de templates
+ * com cabeçalho de imagem, vídeo ou documento.
+ */
 export async function uploadTemplateHeaderHandle(bytes: Uint8Array, mimeType: string, fileName: string): Promise<string> {
   const token = requiredEnv("META_ACCESS_TOKEN");
-  // App IDs are public identifiers. The fallback belongs to Meta Distribuidora.
-  const appId = Deno.env.get("META_APP_ID")?.trim() || "1730405828227526";
+  const appId = Deno.env.get("META_APP_ID")?.trim();
+  if (!appId) throw new Error("Configuração ausente: META_APP_ID é necessário para enviar mídia de exemplo do template.");
   const type = baseMime(mimeType);
+
   const startUrl = new URL(`${graphBaseUrl()}/${graphVersion()}/${appId}/uploads`);
   startUrl.searchParams.set("file_name", fileName || "arquivo");
   startUrl.searchParams.set("file_length", String(bytes.byteLength));
   startUrl.searchParams.set("file_type", type);
-
   const startResponse = await fetch(startUrl.toString(), { method: "POST", headers: { Authorization: `OAuth ${token}` } });
   const startRaw = await startResponse.text();
   let startData: Record<string, unknown> = {};
@@ -109,15 +130,26 @@ export async function uploadTemplateHeaderHandle(bytes: Uint8Array, mimeType: st
   try { finishData = finishRaw ? JSON.parse(finishRaw) : {}; } catch { finishData = {}; }
   if (!finishResponse.ok || typeof finishData.h !== "string") {
     const metaError = finishData.error as Record<string, unknown> | undefined;
-    throw new Error(typeof metaError?.message === "string" ? metaError.message : `A Meta recusou o arquivo (HTTP ${finishResponse.status}).`);
+    throw new Error(typeof metaError?.message === "string" ? metaError.message : `A Meta recusou o envio do arquivo (HTTP ${finishResponse.status}).`);
   }
   return finishData.h;
 }
 
+export type StoredMedia = {
+  storagePath: string;
+  mimeType: string;
+  byteLength: number;
+  sha256: string;
+};
+
+/**
+ * Consulta GET /{media-id}, baixa a URL temporária imediatamente e grava no bucket
+ * privado com caminho isolado por conversa/mensagem. A URL da Meta nunca é persistida.
+ */
 export async function downloadMetaMediaToStorage(
   supabase: AdminClient,
   options: { mediaId: string; conversationId: string; messageKey: string; fallbackMime?: string | null },
-) {
+): Promise<StoredMedia> {
   const token = requiredEnv("META_ACCESS_TOKEN");
   const lookup = await fetch(`${graphBaseUrl()}/${graphVersion()}/${options.mediaId}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
@@ -136,8 +168,9 @@ export async function downloadMetaMediaToStorage(
   const mimeType = baseMime(String(lookupData.mime_type || options.fallbackMime || download.headers.get("content-type") || "application/octet-stream"));
   const extension = mimeType.split("/")[1]?.replace(/[^a-z0-9]/g, "") || "bin";
   const storagePath = `conversations/${options.conversationId}/${options.messageKey}.${extension}`;
+
   const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(storagePath, buffer, { contentType: mimeType, upsert: true });
-  if (error) throw new Error(`Falha ao gravar a mídia no histórico: ${error.message}`);
+  if (error) throw new Error(`Falha ao gravar a mídia no armazenamento privado: ${error.message}`);
 
   let checksum = "";
   try {
@@ -146,10 +179,13 @@ export async function downloadMetaMediaToStorage(
   } catch {
     checksum = await sha256Hex(storagePath);
   }
+
   return { storagePath, mimeType, byteLength: buffer.byteLength, sha256: checksum };
 }
 
-export async function signMediaPath(supabase: AdminClient, storagePath: string, expiresInSeconds = 900): Promise<string | null> {
+/** URL assinada curta (60s) apenas para operadores autenticados. Nunca é registrada em log. */
+export async function signMediaPath(supabase: AdminClient, storagePath: string, expiresInSeconds = 60): Promise<string | null> {
   const { data, error } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(storagePath, expiresInSeconds);
-  return error || !data?.signedUrl ? null : data.signedUrl;
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
 }

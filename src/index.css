@@ -4,112 +4,112 @@
 
 @layer base {
   :root {
-    /* White / black / red light theme */
+    /* Red / black / white light theme */
     --background: 0 0% 98%;
-    --foreground: 0 0% 8%;
+    --foreground: 0 0% 6%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 8%;
+    --card-foreground: 0 0% 6%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
+    --popover-foreground: 0 0% 6%;
 
-    --primary: 0 80% 47%;
+    --primary: 0 100% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 94%;
-    --secondary-foreground: 0 0% 12%;
+    --secondary-foreground: 0 0% 10%;
 
     --muted: 0 0% 94%;
-    --muted-foreground: 0 0% 42%;
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 0 80% 47%;
+    --accent: 0 100% 45%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 52%;
+    --destructive: 0 100% 40%;
     --destructive-foreground: 0 0% 100%;
 
     /* Neutral semantics keep the visual language monochrome. */
-    --success: 0 0% 18%;
+    --success: 0 0% 14%;
     --success-foreground: 0 0% 100%;
-    --warning: 0 80% 47%;
+    --warning: 0 100% 45%;
     --warning-foreground: 0 0% 100%;
-    --info: 0 0% 18%;
+    --info: 0 0% 14%;
     --info-foreground: 0 0% 100%;
 
     --border: 0 0% 86%;
     --input: 0 0% 86%;
-    --ring: 0 80% 47%;
+    --ring: 0 100% 45%;
 
     --radius: 0.9rem;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 10%;
-    --sidebar-primary: 0 80% 47%;
+    --sidebar-foreground: 0 0% 8%;
+    --sidebar-primary: 0 100% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 95%;
-    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 8%;
     --sidebar-border: 0 0% 88%;
-    --sidebar-ring: 0 80% 47%;
+    --sidebar-ring: 0 100% 45%;
 
-    --chart-1: 0 80% 47%;
-    --chart-2: 0 0% 12%;
-    --chart-3: 0 0% 42%;
-    --chart-4: 0 65% 65%;
-    --chart-5: 0 0% 74%;
+    --chart-1: 0 100% 45%;
+    --chart-2: 0 0% 10%;
+    --chart-3: 0 0% 40%;
+    --chart-4: 0 80% 55%;
+    --chart-5: 0 0% 72%;
   }
 
   .dark {
-    /* Black / graphite / red dark theme */
-    --background: 0 0% 5%;
+    /* Red / black / white dark theme */
+    --background: 0 0% 4%;
     --foreground: 0 0% 96%;
 
-    --card: 0 0% 9%;
+    --card: 0 0% 8%;
     --card-foreground: 0 0% 96%;
 
-    --popover: 0 0% 10%;
+    --popover: 0 0% 9%;
     --popover-foreground: 0 0% 96%;
 
-    --primary: 0 84% 58%;
+    --primary: 0 100% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 14%;
+    --secondary: 0 0% 12%;
     --secondary-foreground: 0 0% 94%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 66%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 64%;
 
-    --accent: 0 84% 58%;
+    --accent: 0 100% 52%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 82% 56%;
+    --destructive: 0 90% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 0 0% 84%;
-    --success-foreground: 0 0% 7%;
-    --warning: 0 84% 58%;
+    --success: 0 0% 86%;
+    --success-foreground: 0 0% 5%;
+    --warning: 0 100% 52%;
     --warning-foreground: 0 0% 100%;
-    --info: 0 0% 84%;
-    --info-foreground: 0 0% 7%;
+    --info: 0 0% 86%;
+    --info-foreground: 0 0% 5%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 84% 58%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 0 100% 52%;
 
-    --sidebar-background: 0 0% 7%;
+    --sidebar-background: 0 0% 6%;
     --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 0 84% 58%;
+    --sidebar-primary: 0 100% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent: 0 0% 12%;
     --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 0 84% 58%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 0 100% 52%;
 
-    --chart-1: 0 84% 58%;
-    --chart-2: 0 0% 94%;
-    --chart-3: 0 0% 66%;
-    --chart-4: 0 65% 42%;
-    --chart-5: 0 0% 35%;
+    --chart-1: 0 100% 52%;
+    --chart-2: 0 0% 96%;
+    --chart-3: 0 0% 64%;
+    --chart-4: 0 75% 42%;
+    --chart-5: 0 0% 32%;
   }
 }
 
@@ -149,55 +149,55 @@
     @apply bg-card/85 backdrop-blur-md border border-border/70 shadow-xl shadow-black/10;
   }
 
-  .v4-gradient {
+  .brand-gradient {
     background:
-      radial-gradient(circle at 12% 0%, hsl(0 84% 58% / 0.22), transparent 32%),
-      linear-gradient(135deg, hsl(0 0% 4%) 0%, hsl(0 0% 10%) 55%, hsl(0 75% 12%) 100%);
+      radial-gradient(circle at 12% 0%, hsl(0 100% 52% / 0.22), transparent 32%),
+      linear-gradient(135deg, hsl(0 0% 2%) 0%, hsl(0 0% 8%) 55%, hsl(0 70% 12%) 100%);
   }
 
-  .v4-gradient-radial {
+  .brand-gradient-radial {
     background:
-      radial-gradient(ellipse at 78% 0%, hsl(0 80% 24% / 0.38) 0%, transparent 38%),
-      radial-gradient(ellipse at 18% 20%, hsl(0 0% 20% / 0.42) 0%, transparent 44%),
-      linear-gradient(145deg, hsl(0 0% 4%) 0%, hsl(0 0% 8%) 58%, hsl(0 0% 3%) 100%);
+      radial-gradient(ellipse at 78% 0%, hsl(0 100% 26% / 0.42) 0%, transparent 38%),
+      radial-gradient(ellipse at 18% 20%, hsl(0 0% 18% / 0.45) 0%, transparent 44%),
+      linear-gradient(145deg, hsl(0 0% 2%) 0%, hsl(0 0% 6%) 58%, hsl(0 0% 2%) 100%);
   }
 
-  .v4-gradient-light {
+  .brand-gradient-light {
     background:
-      radial-gradient(circle at 12% 0%, hsl(0 84% 52% / 0.14), transparent 34%),
-      linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(0 0% 96%) 58%, hsl(0 45% 96%) 100%);
+      radial-gradient(circle at 12% 0%, hsl(0 100% 48% / 0.14), transparent 34%),
+      linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(0 0% 96%) 58%, hsl(0 35% 97%) 100%);
   }
 
-  .v4-gradient-radial-light {
+  .brand-gradient-radial-light {
     background:
-      radial-gradient(ellipse at 82% 0%, hsl(0 84% 52% / 0.13) 0%, transparent 34%),
+      radial-gradient(ellipse at 82% 0%, hsl(0 100% 48% / 0.13) 0%, transparent 34%),
       radial-gradient(ellipse at 14% 20%, hsl(0 0% 90% / 0.7) 0%, transparent 44%),
       linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(0 0% 97%) 62%, hsl(0 30% 97%) 100%);
   }
 
-  .v4-glow {
-    box-shadow: 0 0 40px -10px hsl(0 84% 58% / 0.34);
+  .brand-glow {
+    box-shadow: 0 0 40px -10px hsl(0 100% 52% / 0.38);
   }
 
-  .v4-text-gradient {
+  .brand-text-gradient {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(0 84% 64%), hsl(0 84% 46%));
+    background-image: linear-gradient(135deg, hsl(0 100% 62%), hsl(0 100% 45%));
   }
 
-  .v4-grid {
+  .brand-grid {
     background-image:
       linear-gradient(hsl(0 0% 100% / 0.035) 1px, transparent 1px),
       linear-gradient(90deg, hsl(0 0% 100% / 0.035) 1px, transparent 1px);
     background-size: 32px 32px;
   }
 
-  .dark .v4-grid {
+  .dark .brand-grid {
     background-image:
       linear-gradient(hsl(0 0% 100% / 0.035) 1px, transparent 1px),
       linear-gradient(90deg, hsl(0 0% 100% / 0.035) 1px, transparent 1px);
   }
 
-  .light .v4-grid {
+  .light .brand-grid {
     background-image:
       linear-gradient(hsl(0 0% 0% / 0.035) 1px, transparent 1px),
       linear-gradient(90deg, hsl(0 0% 0% / 0.035) 1px, transparent 1px);

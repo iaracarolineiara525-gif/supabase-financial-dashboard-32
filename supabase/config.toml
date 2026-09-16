@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.v4-pin-logout]
 verify_jwt = false
 
+[functions.v4-operator-context]
+verify_jwt = false
+
 [functions.meta-templates-list]
 verify_jwt = false
 
@@ -24,14 +27,32 @@ verify_jwt = false
 [functions.message-contacts-import]
 verify_jwt = false
 
+[functions.message-lists]
+verify_jwt = false
+
+[functions.message-broadcast]
+verify_jwt = false
+
+[functions.message-outbox-list]
+verify_jwt = false
+
 [functions.message-inbox-list]
 verify_jwt = false
 
 [functions.message-inbox-reply]
 verify_jwt = false
 
+[functions.message-inbox-start]
+verify_jwt = false
+
+[functions.message-history-reconcile]
+verify_jwt = false
+
 [functions.whatsapp-media-upload]
 verify_jwt = false
 
-[functions.v4-operator-context]
+[functions.automation-flows]
+verify_jwt = false
+
+[functions.automation-engine]
 verify_jwt = false

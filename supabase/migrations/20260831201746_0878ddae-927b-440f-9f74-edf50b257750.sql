@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.automation_register_response(text, text, timestamptz) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.automation_register_response(text, text, timestamptz) TO service_role;

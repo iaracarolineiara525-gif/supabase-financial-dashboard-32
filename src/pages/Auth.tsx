@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { V4Logo } from '@/components/V4Logo';
+import { BrandIdentity } from '@/components/PersonIdentity';
 import { useTheme } from '@/hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
 
@@ -46,7 +46,7 @@ export default function Auth() {
         toast({ title: 'Acesso não autorizado', description: signInError.message, variant: 'destructive' });
         return;
       }
-      toast({ title: 'Bem-vindo à V4', description: 'Acesso liberado com sessão protegida.' });
+      toast({ title: 'Bem-vindo ao Sistema de Disparo', description: 'Acesso liberado com sessão protegida.' });
       navigate('/');
     } catch {
       setError('Não foi possível validar o acesso agora.');
@@ -57,7 +57,7 @@ export default function Auth() {
   };
 
   return (
-    <div className={`relative min-h-[100dvh] overflow-hidden ${theme === 'dark' ? 'v4-gradient-radial' : 'v4-gradient-radial-light'} v4-grid`}>
+    <div className={`relative min-h-[100dvh] overflow-hidden ${theme === 'dark' ? 'brand-gradient-radial' : 'brand-gradient-radial-light'} brand-grid`}>
       <div className="pointer-events-none absolute -left-24 top-1/3 h-72 w-72 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
       <div className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-foreground/5 blur-3xl" aria-hidden="true" />
 
@@ -67,8 +67,8 @@ export default function Auth() {
           <div className="absolute bottom-0 left-0 h-48 w-48 rounded-full bg-white/5 blur-3xl" aria-hidden="true" />
           <div className="absolute inset-0 opacity-10 [background-image:linear-gradient(rgba(255,255,255,.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.6)_1px,transparent_1px)] [background-size:34px_34px]" aria-hidden="true" />
           <div className="relative">
-            <div className="mb-8 flex items-center gap-3"><V4Logo className="h-11" /><div className="h-10 w-px bg-white/20" /><span className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">Messaging OS</span></div>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-red-200"><span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_hsl(var(--primary))]" /> Acesso operacional V4</div>
+            <div className="mb-8"><BrandIdentity className="text-white" /><p className="mt-3 max-w-xs text-xs leading-5 text-white/55">Operação centralizada de mensagens, contatos e campanhas.</p></div>
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_hsl(var(--primary))]" /> Acesso administrativo</div>
             <h1 className="max-w-xl text-4xl font-semibold leading-[1.04] tracking-[-0.055em] xl:text-5xl">Clareza para decidir.<br /><span className="text-primary">Controle para crescer.</span></h1>
             <p className="mt-4 max-w-lg text-sm leading-6 text-white/60">Uma central de mensagens criada para organizar contatos, campanhas e resultados em uma visão objetiva da operação.</p>
           </div>
@@ -76,8 +76,8 @@ export default function Auth() {
         </section>
 
         <div className="mx-auto w-full max-w-md">
-          <div className="mb-5 flex items-center justify-between lg:justify-end"><div className="lg:hidden"><V4Logo className="h-9" /></div><ThemeToggle /></div>
-          <Card className="glass-card overflow-hidden rounded-[1.25rem] border-border/70 shadow-2xl shadow-black/15"><div className="h-1.5 bg-primary" /><CardHeader className="space-y-3 px-5 pb-4 pt-6 sm:px-7 sm:pt-7"><div className="flex items-start justify-between"><div><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25"><KeyRound className="h-5 w-5" /></div><CardTitle className="text-2xl font-semibold tracking-[-0.04em] sm:text-3xl">Acesso V4</CardTitle><CardDescription className="mt-2 max-w-xs leading-6">Informe o PIN operacional para acessar a plataforma de mensagens.</CardDescription></div></div></CardHeader>
+          <div className="mb-5 flex items-center justify-between lg:justify-end"><div className="lg:hidden"><BrandIdentity compact /></div><ThemeToggle /></div>
+          <Card className="glass-card overflow-hidden rounded-[1.25rem] border-border/70 shadow-2xl shadow-black/15"><div className="h-1.5 bg-primary" /><CardHeader className="space-y-3 px-5 pb-4 pt-6 sm:px-7 sm:pt-7"><div className="flex items-start justify-between"><div><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25"><KeyRound className="h-5 w-5" /></div><CardTitle className="text-2xl font-semibold tracking-[-0.04em] sm:text-3xl">Sistema de Disparo</CardTitle><CardDescription className="mt-2 max-w-xs leading-6">Informe o PIN operacional para acessar a plataforma de mensagens.</CardDescription></div></div></CardHeader>
             <CardContent className="px-5 pb-6 sm:px-7 sm:pb-7"><form onSubmit={handleSubmit} className="space-y-4">
               <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5"><span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground"><Lock className="h-4 w-4 text-primary" /> PIN validado no servidor</span></div>
               <div className="space-y-2"><Label htmlFor="pin">PIN de acesso</Label><div className="relative"><KeyRound className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input id="pin" type="password" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6 dígitos" value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 6))} className="h-11 rounded-xl pl-10 text-center font-mono text-lg tracking-[0.35em]" disabled={loading} autoFocus />{error && <p className="mt-2 text-sm text-destructive">{error}</p>}</div></div>

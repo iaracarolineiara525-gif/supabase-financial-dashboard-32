@@ -27,6 +27,8 @@ Deno.serve(async (request) => {
       fetchedAt: new Date().toISOString(),
     });
   } catch (error) {
-    return json(request, { ok: false, error: safeErrorMessage(error) }, 400);
+    // Respond 200 with ok:false so the UI can show a friendly message instead of a hard error.
+    return json(request, { ok: false, error: safeErrorMessage(error), templates: [] }, 200);
   }
+
 });

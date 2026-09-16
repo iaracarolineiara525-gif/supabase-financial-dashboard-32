@@ -1,4 +1,5 @@
 import { adminClient, isE164, isTestMode, json, metaRequest, noContent, normalizePhone, phoneDigits, requirePinRole, requiredEnv, safeErrorMessage } from "../_shared/meta.ts";
+import { approvedTemplateFromList, renderTemplateBody } from "../_shared/template.ts";
 
 type TemplateCategory = "utility" | "marketing" | "authentication";
 
@@ -16,10 +17,7 @@ function stringValue(value: unknown, field: string): string {
 async function requireApprovedTemplate(name: string, language: string) {
   const query = new URLSearchParams({ fields: "id,name,language,status,category,components", limit: "100", name });
   const { data } = await metaRequest(`/${requiredEnv("META_WABA_ID")}/message_templates?${query.toString()}`);
-  const templates = Array.isArray(data.data) ? data.data as Array<Record<string, unknown>> : [];
-  const match = templates.find((template) => template.name === name && (!language || template.language === language));
-  if (!match || match.status !== "APPROVED") throw new Error("The Meta template must have status APPROVED before it can be sent");
-  return match;
+  return approvedTemplateFromList(data, name, language);
 }
 
 Deno.serve(async (request) => {
@@ -42,13 +40,15 @@ Deno.serve(async (request) => {
         ? normalizeTemplateCategory(approvedTemplate.category, "Meta template category")
         : requestedTemplateCategory
       : null;
+    const templateParameters = Array.isArray(body.parameters) ? body.parameters : [];
+    const renderedBody = templateName ? renderTemplateBody(approvedTemplate, templateParameters) : text;
 
     if (!isE164(to)) throw new Error("The destination must use international E.164 format");
     if (!text && !templateName) throw new Error("message or templateName is required");
     if (text.length > 4096) throw new Error("message exceeds the 4096 character limit");
 
     const supabase = adminClient();
-    const { data: contact, error: contactError } = await supabase.from("message_contacts").select("consent_status, subscription_status, consent_category").eq("phone_e164", phoneDigits(to)).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: contact, error: contactError } = await supabase.from("message_contacts").select("id, full_name, consent_status, subscription_status, consent_category").eq("phone_e164", phoneDigits(to)).order("updated_at", { ascending: false }).limit(1).maybeSingle();
     if (contactError) throw contactError;
     if (!dryRun && (!contact || contact.consent_status !== "consented" || contact.subscription_status !== "active")) throw new Error("Recipient needs an active consent record before a real send");
     if (!dryRun && templateName && contact && contact.consent_category && contact.consent_category !== "all" && contact.consent_category !== effectiveTemplateCategory) throw new Error("Template category is not covered by the recipient consent");
@@ -80,7 +80,7 @@ Deno.serve(async (request) => {
       operator_key: session.operatorKey,
       to_phone_e164: phoneDigits(to),
       message_type: templateName ? "template" : "text",
-      body_preview: text.slice(0, 500),
+      body_preview: renderedBody.slice(0, 500),
       template_name: templateName || null,
       idempotency_key: idempotencyKey,
       status: dryRun ? "simulada" : "pending",
@@ -94,7 +94,7 @@ Deno.serve(async (request) => {
     }
 
     const payload = templateName
-      ? { messaging_product: "whatsapp", recipient_type: "individual", to: phoneDigits(to), type: "template", template: { name: templateName, language: { code: languageCode }, ...(Array.isArray(body.parameters) ? { components: [{ type: "body", parameters: body.parameters }] } : {}) } }
+      ? { messaging_product: "whatsapp", recipient_type: "individual", to: phoneDigits(to), type: "template", template: { name: templateName, language: { code: languageCode }, ...(templateParameters.length > 0 ? { components: [{ type: "body", parameters: templateParameters }] } : {}) } }
       : { messaging_product: "whatsapp", recipient_type: "individual", to: phoneDigits(to), type: "text", text: { body: text } };
 
     let providerData: Record<string, unknown>;
@@ -113,10 +113,10 @@ Deno.serve(async (request) => {
     try {
       const { error: outboxUpdateError } = await supabase.from("message_outbox").update({ status: "processando", external_id: typeof externalId === "string" ? externalId : null, sent_at: sentAt, updated_at: sentAt }).eq("id", messageRow.id);
       if (outboxUpdateError) throw outboxUpdateError;
-      const { data: conversation, error: conversationError } = await supabase.from("message_conversations").upsert({ phone_e164: phoneDigits(to), status: "open", last_message_at: sentAt, last_message_preview: (templateName ? `[Template] ${templateName}` : text).slice(0, 240), last_message_direction: "outbound", updated_at: sentAt }, { onConflict: "phone_e164" }).select("id").single();
+      const { data: conversation, error: conversationError } = await supabase.from("message_conversations").upsert({ phone_e164: phoneDigits(to), contact_id: contact?.id || null, contact_name: contact?.full_name || null, status: "open", last_template_name: templateName || null, last_message_at: sentAt, last_message_preview: renderedBody.slice(0, 240), last_message_direction: "outbound", updated_at: sentAt }, { onConflict: "phone_e164" }).select("id").single();
       if (conversationError) throw conversationError;
       if (conversation) {
-        const { error: historyError } = await supabase.from("message_conversation_messages").insert({ conversation_id: conversation.id, external_id: typeof externalId === "string" ? externalId : null, direction: "outbound", message_type: templateName ? "template" : "text", body: templateName ? `[Template] ${templateName}` : text, status: "processing", sender_phone_e164: phoneDigits(to), operator_key: session.operatorKey, outbox_id: messageRow.id, created_at: sentAt });
+        const { error: historyError } = await supabase.from("message_conversation_messages").insert({ conversation_id: conversation.id, external_id: typeof externalId === "string" ? externalId : null, direction: "outbound", message_type: templateName ? "template" : "text", body: renderedBody, template_name: templateName || null, status: "processing", sender_phone_e164: phoneDigits(to), operator_key: session.operatorKey, outbox_id: messageRow.id, raw_payload: templateName ? { template: templateName, language: languageCode, parameters: templateParameters } : {}, created_at: sentAt });
         if (historyError) throw historyError;
       }
       await supabase.from("message_audit_logs").insert({ actor_id: null, operator_key: session.operatorKey, action: "meta_message_sent_request", metadata: { outbox_id: messageRow.id, external_id: externalId, to: phoneDigits(to) } });

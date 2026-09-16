@@ -7,10 +7,8 @@ type Operator = { key: string; name: string; role: 'owner' | 'admin' | 'operator
 
 type AuthError = { error: Error | null };
 
-function responseError(data: unknown, fallback: string): Error {
-  const message = data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : fallback;
-  return new Error(message);
-}
+
+
 
 export function useAuth() {
   const [authenticated, setAuthenticated] = useState(() => Boolean(getPinSessionToken()));
@@ -25,8 +23,14 @@ export function useAuth() {
         setOperator(null);
         return;
       }
-      void supabase.functions.invoke('v4-operator-context', { body: {}, headers: pinSessionHeaders(token) }).then(({ data }) => {
-        if (data?.ok && data.operator) setOperator(data.operator as Operator);
+      void supabase.functions.invoke('v4-operator-context', { body: {}, headers: pinSessionHeaders(token) }).then(({ data, error }) => {
+        if (error || !data?.ok || !data.operator) {
+          clearPinSessionToken();
+          setOperator(null);
+          setAuthenticated(false);
+          return;
+        }
+        setOperator(data.operator as Operator);
       });
     };
     refresh();
@@ -39,16 +43,29 @@ export function useAuth() {
     try {
       const { data, error } = await supabase.functions.invoke('v4-pin-login', { body: { pin } });
       if (error || !data?.ok || typeof data.sessionToken !== 'string') {
-        return { error: responseError(data, error?.message || 'PIN inválido.') };
+        let message = 'PIN inválido.';
+        const context = (error as { context?: Response } | null)?.context;
+        if (context && typeof context.json === 'function') {
+          try {
+            const payload = await context.clone().json();
+            if (payload && typeof payload.error === 'string') message = payload.error;
+          } catch {
+            // mantém a mensagem padrão
+          }
+        } else if (data && typeof data === 'object' && 'error' in data && typeof data.error === 'string') {
+          message = data.error;
+        }
+        return { error: new Error(message) };
       }
       setPinSessionToken(data.sessionToken);
-      setOperator(data.operator && typeof data.operator === 'object' ? data.operator as Operator : { key: 'primary', name: 'Operador principal V4', role: 'owner' });
+      setOperator(data.operator && typeof data.operator === 'object' ? data.operator as Operator : { key: 'primary', name: 'Operador principal Meta Distribuidora', role: 'owner' });
       setAuthenticated(true);
       return { error: null };
     } finally {
       setLoading(false);
     }
   };
+
 
   const signOut = async (): Promise<AuthError> => {
     const token = getPinSessionToken();

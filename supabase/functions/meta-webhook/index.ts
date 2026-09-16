@@ -49,10 +49,6 @@ Deno.serve(async (request) => {
         const statuses = Array.isArray(value.statuses) ? value.statuses as Array<Record<string, unknown>> : [];
         const inboundMessages = Array.isArray(value.messages) ? value.messages as Array<Record<string, unknown>> : [];
         const contacts = Array.isArray(value.contacts) ? value.contacts as Array<Record<string, unknown>> : [];
-        const { data: savedContacts, error: savedContactsError } = inboundMessages.length > 0
-          ? await supabase.from("message_contacts").select("id, full_name, phone_e164").order("updated_at", { ascending: false }).limit(2000)
-          : { data: [], error: null };
-        if (savedContactsError) throw savedContactsError;
 
         for (const status of statuses) {
           const externalId = typeof status.id === "string" ? status.id : "";
@@ -73,7 +69,15 @@ Deno.serve(async (request) => {
           await supabase.from("message_outbox").update(statusUpdate).eq("external_id", externalId);
           const conversationStatus = providerStatus === "sent" ? "sent" : providerStatus === "delivered" ? "delivered" : providerStatus === "read" ? "read" : providerStatus === "failed" ? "failed" : "processing";
           await supabase.from("message_conversation_messages").update({ status: conversationStatus }).eq("external_id", externalId);
+          const recipientStatus = providerStatus === "delivered" || providerStatus === "read" ? "delivered" : providerStatus === "failed" ? "failed" : null;
+          if (recipientStatus) {
+            const recipientUpdate: Record<string, unknown> = { status: recipientStatus, last_status_at: statusTimestamp, updated_at: statusTimestamp };
+            if (recipientStatus === "delivered") recipientUpdate.delivered_at = statusTimestamp;
+            if (recipientStatus === "failed") recipientUpdate.last_error = JSON.stringify(providerError).slice(0, 500);
+            await supabase.from("message_campaign_recipients").update(recipientUpdate).eq("external_id", externalId);
+          }
           await supabase.from("message_events").upsert({ external_id: externalId, event_type: providerStatus, normalized_status: normalizeMessageStatus(providerStatus), payload: status, event_hash: await sha256Hex(JSON.stringify(status)) }, { onConflict: "event_hash" });
+
         }
 
         for (const inbound of inboundMessages) {
@@ -92,12 +96,12 @@ Deno.serve(async (request) => {
           const mediaSha256 = typeof mediaPayload?.sha256 === "string" ? mediaPayload.sha256 : null;
           const mediaCaption = typeof mediaPayload?.caption === "string" ? mediaPayload.caption : null;
           const isVoiceNote = mediaPayload?.voice === true;
-          const body = typeof textPayload?.body === "string" ? textPayload.body : mediaCaption || (mediaId ? `[${isVoiceNote ? "áudio de voz" : messageType}]` : null);
+          const body = typeof textPayload?.body === "string"
+            ? textPayload.body
+            : mediaCaption || (mediaId ? `[${isVoiceNote ? "áudio de voz" : messageType}]` : null);
           const contact = contacts.find((item) => item.wa_id === senderDigits);
           const profile = contact?.profile && typeof contact.profile === "object" ? contact.profile as Record<string, unknown> : null;
-          const profileName = typeof profile?.name === "string" ? profile.name : null;
-          const savedContact = ((savedContacts || []) as Array<{ id: string; full_name: string; phone_e164: string }>).find((item) => item.phone_e164.replace(/\D/g, "") === senderDigits);
-          const contactName = savedContact?.full_name || profileName;
+          const contactName = typeof profile?.name === "string" ? profile.name : null;
           const timestampSeconds = typeof inbound.timestamp === "string" || typeof inbound.timestamp === "number" ? Number(inbound.timestamp) : NaN;
           const providerTimestamp = Number.isFinite(timestampSeconds) ? new Date(timestampSeconds * 1000).toISOString() : null;
           const serviceWindowBase = providerTimestamp ? new Date(providerTimestamp).getTime() : Date.now();
@@ -114,20 +118,17 @@ Deno.serve(async (request) => {
           });
           if (inboundError) throw inboundError;
 
+          // Mídia: baixa e grava no bucket privado apenas na primeira vez (idempotência pelo wamid).
           const result = (Array.isArray(inboundResult) ? inboundResult[0] : inboundResult) as Record<string, unknown> | null;
           const conversationId = typeof result?.conversation_id === "string" ? result.conversation_id : null;
           const isDuplicate = result?.duplicate === true;
-          if (conversationId && savedContact) {
-            await supabase.from("message_conversations").update({ contact_id: savedContact.id, contact_name: savedContact.full_name, updated_at: new Date().toISOString() }).eq("id", conversationId);
-          }
-
           if (mediaId && conversationId && !isDuplicate) {
             const mediaUpdate: Record<string, unknown> = {
               media_id: mediaId,
               media_mime_type: mediaMimeType,
               media_sha256: mediaSha256,
               media_caption: mediaCaption,
-              processing_status: "stored",
+              processing_status: messageType === "audio" ? "awaiting_transcription" : "stored",
             };
             try {
               const stored = await downloadMetaMediaToStorage(supabase, {
@@ -140,11 +141,21 @@ Deno.serve(async (request) => {
               mediaUpdate.media_mime_type = stored.mimeType;
               if (!mediaSha256) mediaUpdate.media_sha256 = stored.sha256;
             } catch (mediaError) {
+              // Nunca registra a URL temporária nem o token: apenas a mensagem tratada.
               mediaUpdate.processing_status = "media_download_failed";
+              mediaUpdate.transcription = null;
               console.error("media_download_failed", safeErrorMessage(mediaError));
             }
             await supabase.from("message_conversation_messages").update(mediaUpdate).eq("external_id", externalId);
           }
+
+          // Marca a resposta nos fluxos de automação para liberar o caminho "respondeu".
+          const { error: automationError } = await supabase.rpc("automation_register_response", {
+            p_phone_e164: `+${senderDigits}`,
+            p_preview: body || `[${messageType}]`,
+          });
+          if (automationError) throw automationError;
+
         }
       }
     }
